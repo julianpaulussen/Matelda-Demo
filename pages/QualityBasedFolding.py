@@ -13,7 +13,6 @@ def generate_table_snippet():
     col_start = max(0, h_col - 2)
     col_end = min(ncols, h_col + 3)
     
-    # Build HTML for a table with column and row headers.
     table_html = "<table style='border-collapse: collapse; width:100%;'>"
     table_html += "<tr>"
     table_html += "<th style='background-color: #f0f0f0; border: 1px solid #ccc; padding: 4px;'></th>"
@@ -48,15 +47,16 @@ def get_card_html(card):
     </div>
     """
 
-# Retrieve the labeling budget from session state (defaults to 10 if not set)
-budget = st.session_state.get("labeling_budget")
+# Retrieve the labeling budget from session state (default to 10 if not set)
+budget = st.session_state.get("labeling_budget", 10)
 
-# Generate cards equal to the labeling budget
+# Generate cards based on the labeling budget
 cards = [
     {"name": f"Card {i+1}", "table_snippet": generate_table_snippet()}
     for i in range(budget)
 ]
 
+# Define HTML template as a normal string and escape literal braces.
 html_code = """
 <!DOCTYPE html>
 <html>
@@ -65,67 +65,31 @@ html_code = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <style>
-      html, body {{
-        margin: 0;
-        padding: 0;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
+      html, body {{ margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; }}
+      #tinder {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; }}
+      #progress-container {{ width: 90%; margin: 10px auto; text-align: center; }}
+      #progress-bar {{ width: 100%; height: 20px; }}
+      #progress-text {{
+          background-color: white;
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          margin-top: 4px;
       }}
-      #tinder {{
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-      }}
-      #tinder--cards {{
-        position: relative;
-        width: 100%;
-        height: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }}
-      .tinder--card {{
-        position: absolute;
-        background: #fff;
-        width: 90%;
-        height: 100%;
-        border-radius: 10px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-        overflow: hidden;
-        transition: 0.3s;
-        touch-action: none;
-      }}
-      #tinder--buttons {{
-        width: 100%;
-        height: 15%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 20px;
-        margin-top: 10px;
-      }}
-      #tinder--buttons button {{
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background-color: #fff;
-        border: 3px solid #e6e6e6;
-        cursor: pointer;
-        outline: none;
-        font-size: 32px;
-        transition: 0.2s;
-      }}
-      #tinder--buttons button:hover {{
-        transform: scale(1.1);
-      }}
+      #tinder--cards {{ position: relative; width: 100%; height: 50%; display: flex; justify-content: center; align-items: center; }}
+      .tinder--card {{ position: absolute; background: #fff; width: 90%; height: 100%; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); overflow: hidden; transition: 0.3s; touch-action: none; }}
+      #tinder--buttons {{ width: 100%; height: 15%; display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 10px; }}
+      #tinder--buttons button {{ width: 80px; height: 80px; border-radius: 50%; background-color: #fff; border: 3px solid #e6e6e6; cursor: pointer; outline: none; font-size: 32px; transition: 0.2s; }}
+      #tinder--buttons button:hover {{ transform: scale(1.1); }}
     </style>
   </head>
   <body>
     <div id="tinder">
+      <!-- Progress bar container -->
+      <div id="progress-container">
+        <progress id="progress-bar" value="0" max="{budget}"></progress>
+        <div id="progress-text">0% (0/{budget})</div>
+      </div>
       <div id="tinder--cards">
         {cards_html}
       </div>
@@ -137,18 +101,31 @@ html_code = """
     </div>
     <script>
       var removedCards = [];
+      var total = {budget};
       function updateCards() {{
         var allCards = document.querySelectorAll('.tinder--card');
-        var total = allCards.length;
+        var remaining = allCards.length;
+        var completed = total - remaining;
+        updateProgressBar(completed);
         allCards.forEach(function(card, index) {{
-          card.style.zIndex = total - index;
+          card.style.zIndex = remaining - index;
           card.style.transform = 'translate(0, 0) rotate(0)';
           card.style.opacity = 1;
         }});
       }}
+
+      function updateProgressBar(completed) {{
+        var progressBar = document.getElementById('progress-bar');
+        var progressText = document.getElementById('progress-text');
+        progressBar.value = completed;
+        var percent = Math.round((completed / total) * 100);
+        progressText.innerHTML = percent + "% (" + completed + "/" + total + ")";
+      }}
+
       function getTopCard() {{
         return document.querySelector('.tinder--card');
       }}
+
       function removeCard(like) {{
         var card = getTopCard();
         if (!card) return;
@@ -162,12 +139,15 @@ html_code = """
           updateCards();
         }}, 300);
       }}
+
       document.getElementById('dislike').addEventListener('click', function() {{
         removeCard(false);
       }});
+
       document.getElementById('like').addEventListener('click', function() {{
         removeCard(true);
       }});
+
       document.getElementById('back').addEventListener('click', function() {{
         if (removedCards.length > 0) {{
           var card = removedCards.pop();
@@ -179,6 +159,7 @@ html_code = """
           updateCards();
         }}
       }});
+
       function attachHammer(card) {{
         var hammertime = new Hammer(card);
         hammertime.on('pan', function(event) {{
@@ -214,6 +195,7 @@ html_code = """
           }}
         }});
       }}
+
       var initialCards = document.querySelectorAll('.tinder--card');
       initialCards.forEach(function(card) {{
         attachHammer(card);
@@ -224,8 +206,9 @@ html_code = """
 </html>
 """
 
+# Combine the generated cards HTML with the template.
 cards_html_concat = "".join([get_card_html(card) for card in cards])
-final_html = html_code.format(cards_html=cards_html_concat)
+final_html = html_code.format(cards_html=cards_html_concat, budget=budget)
 
 st.title("Matelda - Swiping")
 st.components.v1.html(final_html, height=800, scrolling=False)

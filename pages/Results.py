@@ -9,3 +9,4 @@ if current_page != "Results":
 
 st.title("Results")
 st.write("Here are the final results!")
+st.balloons()
