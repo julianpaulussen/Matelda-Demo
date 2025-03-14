@@ -229,6 +229,8 @@ if st.session_state.run_quality_folding:
     cards_html_concat = "".join([get_card_html(card) for card in cards])
     final_html = html_code.format(cards_html=cards_html_concat, budget=budget)
 
+    st.write("Swipe the correct cells to the right and the incorrect to the left.")
+
     #st.title("Quality Based Folding")
     st.components.v1.html(final_html, height=800, scrolling=False)
 

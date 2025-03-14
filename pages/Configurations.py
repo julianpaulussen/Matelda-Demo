@@ -49,7 +49,6 @@ if st.button("Save Configurations"):
     st.session_state.config_saved = True
     st.session_state.labeling_budget = st.session_state.budget_slider
     st.success("Configurations saved!")
-    st.write("Saved budget:", st.session_state.labeling_budget)
 
 if st.button("Next"):
     st.switch_page("pages/DomainBasedFolding.py")
