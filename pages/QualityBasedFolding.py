@@ -56,7 +56,8 @@ cards = [
     for i in range(budget)
 ]
 
-# Define HTML template as a normal string and escape literal braces.
+# Define HTML template with an updated JS block. The JS function now checks if all cards have been swiped,
+# and if so, updates the URL with ?done=1.
 html_code = """
 <!DOCTYPE html>
 <html>
@@ -112,6 +113,10 @@ html_code = """
           card.style.transform = 'translate(0, 0) rotate(0)';
           card.style.opacity = 1;
         }});
+        // If no cards remain, update URL to show Next button in Streamlit.
+        if (allCards.length === 0) {{
+          window.location.href = window.location.pathname + "?done=1";
+        }}
       }}
 
       function updateProgressBar(completed) {{
@@ -212,3 +217,9 @@ final_html = html_code.format(cards_html=cards_html_concat, budget=budget)
 
 st.title("Matelda - Swiping")
 st.components.v1.html(final_html, height=800, scrolling=False)
+
+# Only show the Next button if the query parameter 'done=1' is present.
+params = st.query_params
+if "done" in params and params["done"][0] == "1":
+    if st.button("Next"):
+        st.switch_page("pages/Results.py")

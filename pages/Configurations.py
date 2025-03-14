@@ -1,15 +1,9 @@
 import streamlit as st
 
-params = st.query_params
-current_page = params.get("page", "Configurations")
-if current_page != "Configurations":
-    params["page"] = "Configurations"
-    st.stop()
-
 st.title("Configurations")
 st.subheader("Select a table")
 
-# Table selection with a default.
+# Table selection 
 options = ["Quintet", "DGov_NT", "WDC"]
 selected_table = st.radio(
     "Table Selection", 
@@ -56,3 +50,6 @@ if st.button("Save Configurations"):
     st.session_state.labeling_budget = st.session_state.budget_slider
     st.success("Configurations saved!")
     st.write("Saved budget:", st.session_state.labeling_budget)
+
+if st.button("Next"):
+    st.switch_page("pages/DomainBasedFolding.py")
