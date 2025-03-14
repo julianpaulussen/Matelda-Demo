@@ -2,6 +2,9 @@ import streamlit as st
 import random
 import numpy as np
 
+# -----------------------------
+# Utility functions
+# -----------------------------
 def generate_table_snippet():
     # Create random data: 10 rows x 10 columns.
     nrows, ncols = 10, 10
@@ -39,14 +42,6 @@ def generate_table_snippet():
         table_html += "</tr>"
     table_html += "</table>"
     return table_html
-
-# Create several cards – each with its own table snippet and a title.
-cards = [
-    {"name": "Card 1", "table_snippet": generate_table_snippet()},
-    {"name": "Card 2", "table_snippet": generate_table_snippet()},
-    {"name": "Card 3", "table_snippet": generate_table_snippet()},
-    {"name": "Card 4", "table_snippet": generate_table_snippet()},
-]
 
 def get_card_html(card):
     # Wrap the table snippet and the title in fixed-size containers.
@@ -87,7 +82,7 @@ html_code = """
         justify-content: flex-start;
         align-items: center;
       }}
-      /* Card container now occupies 50% of the viewport height */
+      /* Card container occupies 50% of the viewport height */
       #tinder--cards {{
         position: relative;
         width: 100%;
@@ -96,7 +91,7 @@ html_code = """
         justify-content: center;
         align-items: center;
       }}
-      /* Cards styled like large Tinder cards */
+      /* Tinder card style */
       .tinder--card {{
         position: absolute;
         background: #fff;
@@ -108,7 +103,7 @@ html_code = """
         transition: 0.3s;
         touch-action: none;
       }}
-      /* Buttons container now occupies 15% of the viewport height and sits close to the cards */
+      /* Buttons container */
       #tinder--buttons {{
         width: 100%;
         height: 15%;
@@ -118,7 +113,7 @@ html_code = """
         gap: 20px;
         margin-top: 10px;
       }}
-      /* Style the buttons for better visibility */
+      /* Button styling */
       #tinder--buttons button {{
         width: 80px;
         height: 80px;
@@ -147,9 +142,8 @@ html_code = """
       </div>
     </div>
     <script>
-      // removedCards is a stack for multi-level undo.
+      // Stack to support undo
       var removedCards = [];
-
       function updateCards() {{
         var allCards = document.querySelectorAll('.tinder--card');
         var total = allCards.length;
@@ -159,11 +153,9 @@ html_code = """
           card.style.opacity = 1;
         }});
       }}
-
       function getTopCard() {{
         return document.querySelector('.tinder--card');
       }}
-
       function removeCard(like) {{
         var card = getTopCard();
         if (!card) return;
@@ -177,7 +169,6 @@ html_code = """
           updateCards();
         }}, 300);
       }}
-
       document.getElementById('dislike').addEventListener('click', function() {{
         removeCard(false);
       }});
@@ -195,7 +186,6 @@ html_code = """
           updateCards();
         }}
       }});
-
       function attachHammer(card) {{
         var hammertime = new Hammer(card);
         hammertime.on('pan', function(event) {{
@@ -231,7 +221,6 @@ html_code = """
           }}
         }});
       }}
-
       var initialCards = document.querySelectorAll('.tinder--card');
       initialCards.forEach(function(card) {{
         attachHammer(card);
@@ -242,11 +231,37 @@ html_code = """
 </html>
 """
 
-def tinder_clone_app():
-    st.title("Matelda")
+# -----------------------------
+# Screen Functions
+# -----------------------------
+def home_screen():
+    st.title("Matelda - Home")
+    st.write("Welcome to the home screen! Use the sidebar to navigate.")
+
+def settings_screen():
+    st.title("Matelda - Settings")
+    st.write("Here you can adjust your settings.")
+
+def swiping_screen():
+    st.title("Matelda - Swiping")
+    # Create cards for the Tinder clone.
+    cards = [
+        {"name": "Card 1", "table_snippet": generate_table_snippet()},
+        {"name": "Card 2", "table_snippet": generate_table_snippet()},
+        {"name": "Card 3", "table_snippet": generate_table_snippet()},
+        {"name": "Card 4", "table_snippet": generate_table_snippet()},
+    ]
     cards_html_concat = "".join([get_card_html(card) for card in cards])
     final_html = html_code.format(cards_html=cards_html_concat)
     st.components.v1.html(final_html, height=800, scrolling=False)
 
-if __name__ == "__main__":
-    tinder_clone_app()
+# -----------------------------
+# Main Navigation via Sidebar
+# -----------------------------
+page = st.sidebar.radio("Navigation", ["Home", "Swiping", "Settings"])
+if page == "Home":
+    home_screen()
+elif page == "Swiping":
+    swiping_screen()
+elif page == "Settings":
+    settings_screen()
