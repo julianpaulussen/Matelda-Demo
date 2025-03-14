@@ -48,6 +48,15 @@ def get_card_html(card):
     </div>
     """
 
+# Retrieve the labeling budget from session state (defaults to 10 if not set)
+budget = st.session_state.get("labeling_budget")
+
+# Generate cards equal to the labeling budget
+cards = [
+    {"name": f"Card {i+1}", "table_snippet": generate_table_snippet()}
+    for i in range(budget)
+]
+
 html_code = """
 <!DOCTYPE html>
 <html>
@@ -215,16 +224,8 @@ html_code = """
 </html>
 """
 
-st.title("Matelda - Swiping")
-# Generate several cards for the Tinder clone.
-cards = [
-    {"name": "Card 1", "table_snippet": generate_table_snippet()},
-    {"name": "Card 2", "table_snippet": generate_table_snippet()},
-    {"name": "Card 3", "table_snippet": generate_table_snippet()},
-    {"name": "Card 4", "table_snippet": generate_table_snippet()},
-]
 cards_html_concat = "".join([get_card_html(card) for card in cards])
 final_html = html_code.format(cards_html=cards_html_concat)
-st.components.v1.html(final_html, height=800, scrolling=False)
 
-# ToDo: Insert Next button after swiping
+st.title("Matelda - Swiping")
+st.components.v1.html(final_html, height=800, scrolling=False)
