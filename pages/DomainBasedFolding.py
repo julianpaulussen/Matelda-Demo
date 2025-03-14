@@ -1,19 +1,30 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import time  # For simulating loading time
+import time
 
 # Set the page title
 st.title("Domain Based Folding")
 
-# Initialize session state
+# Initialize session state for tracking table locations
 if "run_folding" not in st.session_state:
     st.session_state.run_folding = False
 
+if "table_locations" not in st.session_state:
+    st.session_state.table_locations = {
+        "Sales Data": "Domain Fold 1",
+        "Customer Data": "Domain Fold 1",
+        "Inventory Data": "Domain Fold 1",
+        "Financial Report": "Domain Fold 2",
+        "Employee Data": "Domain Fold 2",
+        "Performance Metrics": "Domain Fold 3",
+        "Risk Analysis": "Domain Fold 3"
+    }
+
 # Button to start processing
 if st.button("Run Domain Based Folding"):
-    with st.spinner("🔄 Processing... Please wait..."):  # Show loading animation
-        time.sleep(5)  # Simulate a delay
+    with st.spinner("🔄 Processing... Please wait..."):
+        time.sleep(3)  # Simulate a delay
     st.session_state.run_folding = True  # Show content after loading
 
 # Show content only after clicking "Run Domain Based Folding"
@@ -26,38 +37,39 @@ if st.session_state.run_folding:
             columns=[f"Col {i+1}" for i in range(cols)]
         )
 
-    # FIRST CONTAINER: 3 Tables
-    with st.container():
-        st.subheader("Domain Fold 1")
+    # Folds Dictionary
+    domain_folds = {
+        "Domain Fold 1": [],
+        "Domain Fold 2": [],
+        "Domain Fold 3": []
+    }
 
-        with st.expander("Sales Data"):
-            st.dataframe(generate_random_table(10, 5))
+    # Sort tables into their current domain fold
+    for table_name, fold in st.session_state.table_locations.items():
+        domain_folds[fold].append(table_name)
 
-        with st.expander("Customer Data"):
-            st.dataframe(generate_random_table(8, 4))
+    # Iterate through each domain fold and display tables
+    for fold_name, tables in domain_folds.items():
+        with st.container():
+            st.subheader(f"{fold_name}")
 
-        with st.expander("Inventory Data"):
-            st.dataframe(generate_random_table(12, 6))
+            for table in tables:
+                with st.expander(f"📊 {table}"):
+                    # Show table
+                    st.dataframe(generate_random_table(8, 4))
 
-    # SECOND CONTAINER: 2 Tables
-    with st.container():
-        st.subheader("Domain Fold 2")
+                    # Move table options (inside the same expander)
+                    new_location = st.radio(
+                        f"Move {table} to:",
+                        options=["Domain Fold 1", "Domain Fold 2", "Domain Fold 3"],
+                        index=["Domain Fold 1", "Domain Fold 2", "Domain Fold 3"].index(st.session_state.table_locations[table]),
+                        key=f"move_{table}"
+                    )
 
-        with st.expander("Financial Report"):
-            st.dataframe(generate_random_table(7, 4))
-
-        with st.expander("Employee Data"):
-            st.dataframe(generate_random_table(9, 5))
-
-    # THIRD CONTAINER: 2 Tables
-    with st.container():
-        st.subheader("Domain Fold 3")
-
-        with st.expander("Performance Metrics"):
-            st.dataframe(generate_random_table(6, 3))
-
-        with st.expander("Risk Analysis"):
-            st.dataframe(generate_random_table(5, 4))
+                    # Update session state if table is moved
+                    if new_location != st.session_state.table_locations[table]:
+                        st.session_state.table_locations[table] = new_location
+                        st.rerun()  # Refresh to reflect changes
 
     # Navigation Button
     if st.button("Next"):
