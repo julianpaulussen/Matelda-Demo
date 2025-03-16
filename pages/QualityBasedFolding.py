@@ -234,5 +234,7 @@ if st.session_state.run_quality_folding:
     #st.title("Quality Based Folding")
     st.components.v1.html(final_html, height=800, scrolling=False)
 
-    #if st.button("Next"):
-    #    st.switch_page("pages/Results.py")
+    st.markdown("---")
+
+    if st.button("Next"):
+        st.switch_page("pages/Results.py")
