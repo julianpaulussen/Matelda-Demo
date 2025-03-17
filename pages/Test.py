@@ -2,6 +2,22 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+# Hide default Streamlit menu
+st.markdown("""
+    <style>
+        [data-testid="stSidebarNav"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.page_link("app.py", label="Matelda")
+    st.page_link("pages/Configurations.py", label="Configurations")
+    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
+    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
+    st.page_link("pages/Labeling.py", label="Labeling")
+    st.page_link("pages/ErrorDetection.py", label="Error Detection")
+    st.page_link("pages/Results.py", label="Results")
+
 # -------------------- STATE MANAGEMENT --------------------
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0

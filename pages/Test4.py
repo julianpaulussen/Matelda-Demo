@@ -4,6 +4,22 @@ import numpy as np
 import time
 import json
 
+# Hide default Streamlit menu
+st.markdown("""
+    <style>
+        [data-testid="stSidebarNav"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.page_link("app.py", label="Matelda")
+    st.page_link("pages/Configurations.py", label="Configurations")
+    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
+    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
+    st.page_link("pages/Labeling.py", label="Labeling")
+    st.page_link("pages/ErrorDetection.py", label="Error Detection")
+    st.page_link("pages/Results.py", label="Results")
+
 def generate_table_data():
     """
     Generate a 10×10 table of random integers, plus a randomly chosen 'highlighted' cell.

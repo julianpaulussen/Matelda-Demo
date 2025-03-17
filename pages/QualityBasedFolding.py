@@ -7,6 +7,22 @@ import time
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
 st.title("Quality Based Folding")
 
+# Hide default Streamlit menu
+st.markdown("""
+    <style>
+        [data-testid="stSidebarNav"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.page_link("app.py", label="Matelda")
+    st.page_link("pages/Configurations.py", label="Configurations")
+    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
+    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
+    st.page_link("pages/Labeling.py", label="Labeling")
+    st.page_link("pages/ErrorDetection.py", label="Error Detection")
+    st.page_link("pages/Results.py", label="Results")
+
 # Initialize session state
 if "run_quality_folding" not in st.session_state:
     st.session_state.run_quality_folding = False
