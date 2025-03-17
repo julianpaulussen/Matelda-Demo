@@ -24,20 +24,17 @@ def generate_table_data():
     """
     Generate a 10×10 table of random integers, plus a randomly chosen 'highlighted' cell.
     Returns:
-      data_list  - the table data as a list of dicts (for Tabulator).
+      data_list  - the table data as a list of dicts (for Tabulator)
       h_row      - highlighted row index
       h_col      - highlighted column index
     """
     nrows, ncols = 10, 10
     arr = np.random.randint(1, 100, (nrows, ncols))
-    # Pick random highlighted cell
     h_row = random.randint(0, nrows - 1)
     h_col = random.randint(0, ncols - 1)
-    
-    # Convert to list-of-dicts for Tabulator
     data_list = []
     for r in range(nrows):
-        row_dict = {"rowIndex": r}  # We'll store the row index in a field
+        row_dict = {"rowIndex": r}
         for c in range(ncols):
             row_dict[f"col{c}"] = int(arr[r, c])
         data_list.append(row_dict)
@@ -45,105 +42,141 @@ def generate_table_data():
 
 def get_card_html(card):
     """
-    Build HTML for one "card":
-      - Creates a Tabulator table of 10×10 random data
-      - Highlights a random cell in darker orange
-      - Highlights that cell's row/column in lighter orange
-      - Avoids f-string curly-brace conflicts by using normal strings + .replace()
+    Build HTML for one card:
+      - Generates a 10×10 table with one randomly highlighted cell.
+      - In zoom mode (default, Inspect off) only a subset (centered on the highlighted cell) is shown,
+        using the original highlighted cell values.
+      - When toggled to Inspect, the full interactive table is rebuilt.
+      - Toggling back reverts to the original zoom view.
     """
     data_list, h_row, h_col = generate_table_data()
     table_data_json = json.dumps(data_list)
     
-    # 1) A normal (non-f) triple-quoted string for our cell formatter JavaScript
-    #    We temporarily use placeholders H_ROW and H_COL, then do .replace() to insert real values.
-    cell_formatter_js = """
-function(cell, formatterParams, onRendered) {
-    let rowVal = cell.getRow().getData().rowIndex;
-    let colField = cell.getColumn().getField();
-    let val = cell.getValue();
-
-    // If this cell is exactly the highlighted cell
-    if(rowVal == H_ROW && colField == "colH_COL") {
-      return "<div style='background-color: #FF8C00; color:white; padding:4px;'>" + val + "</div>";
-    }
-    // If this cell is in the same row or column as the highlight
-    else if(rowVal == H_ROW || colField == "colH_COL") {
-      return "<div style='background-color: #FFDAB9; padding:4px;'>" + val + "</div>";
-    }
-    // Otherwise normal cell
-    else {
-      return val;
-    }
-}
+    # Formatter functions with embedded h_row and h_col
+    cell_formatter_js = f"""
+var cellFormatter = function(cell, formatterParams, onRendered) {{
+    var rowVal = cell.getRow().getData().rowIndex;
+    var colField = cell.getColumn().getField();
+    var val = cell.getValue();
+    if(rowVal == {h_row} && colField == "col{h_col}") {{
+       return "<div style='background-color: #FF8C00; color:white; padding:4px;'>" + val + "</div>";
+    }} else if(rowVal == {h_row} || colField == "col{h_col}") {{
+       return "<div style='background-color: #FFDAB9; padding:4px;'>" + val + "</div>";
+    }} else {{
+       return val;
+    }}
+}};
 """
-    # Insert the real highlight row/col into that code
-    cell_formatter_js = cell_formatter_js.replace("H_ROW", str(h_row))
-    cell_formatter_js = cell_formatter_js.replace("H_COL", str(h_col))
-
-    # 2) A normal string for the rowIndex formatter
-    row_index_formatter_js = """
-function(cell, formatterParams, onRendered) {
-    let rowVal = cell.getValue();
-    if(rowVal == H_ROW) {
-      return "<div style='background-color: #FFDAB9; padding:4px;'>" + rowVal + "</div>";
-    } else {
-      return rowVal;
-    }
-}
+    row_index_formatter_js = f"""
+var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
+    var rowVal = cell.getValue();
+    if(rowVal == {h_row}) {{
+       return "<div style='background-color: #FFDAB9; padding:4px;'>" + rowVal + "</div>";
+    }} else {{
+       return rowVal;
+    }}
+}};
 """
-    row_index_formatter_js = row_index_formatter_js.replace("H_ROW", str(h_row))
-
-    # 3) Build the columns array in JavaScript syntax
-    #    We'll do so by string concatenation (avoiding extra braces in f-strings).
-    columns_js_parts = []
-
-    # First column: rowIndex
-    col_def_row_index = (
-        "{"
-        '"title":"Row",'
-        '"field":"rowIndex",'
-        '"width":60,'
-        f'"formatter":{row_index_formatter_js}'
-        "}"
-    )
-    columns_js_parts.append(col_def_row_index)
-
-    # Next columns: col0..col9
-    for c in range(10):
-        col_def = (
-            "{"
-            f'"title":"Col {c}",'
-            f'"field":"col{c}",'
-            f'"formatter":{cell_formatter_js}'
-            "}"
-        )
-        columns_js_parts.append(col_def)
-
-    # Join them into a single JS array: [ {...}, {...}, ... ]
-    columns_js_str = "[" + ",".join(columns_js_parts) + "]"
-
-    # 4) Final card HTML
     card_id = card["id"]
     return f"""
-    <div class="tinder--card" id="card-{card_id}"
-         style="position: absolute; width: 90%; height: 100%; border-radius: 10px; 
-                box-shadow: 0 8px 30px rgba(0,0,0,0.2); overflow: hidden; 
-                transition: 0.3s; touch-action: none; margin: 10px;">
-      <div class="table-container" style="width: 100%; height: 70%; display: flex; align-items: center; justify-content: center;">
+    <div class="tinder--card" id="card-{card_id}" style="position: absolute; width: 90%; height: 100%; border-radius: 10px; background: #fff; overflow: hidden; transition: 0.3s; touch-action: none; margin: 10px;">
+      <div class="table-container" id="table-container-{card_id}" style="width: 100%; height: 70%; display: flex; align-items: center; justify-content: center;">
           <div id="table-{card_id}" style="width:95%; height:95%;"></div>
       </div>
-      <div class="name-container" style="width: 100%; height: 30%; display: flex; align-items: center; justify-content: center;">
-         <h3 style="margin: 0; font-size: 24px;">{card['name']}</h3>
+      <div class="info-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px;">
+         <div class="name-container">
+           <h3 style="margin: 0; font-size: 24px;">{card['name']}</h3>
+         </div>
+         <div class="inspect-container" style="display: flex; align-items: center;">
+           <label class="switch">
+             <input type="checkbox" id="inspect-{card_id}">
+             <span class="slider round"></span>
+           </label>
+           <span style="margin-left: 8px; font-size: 14px; color: #555;">Inspect Table</span>
+         </div>
       </div>
       <script>
-        // Build a Tabulator for this card
-        new Tabulator("#table-{card_id}", {{
-          data:{table_data_json},    // the 10×10 data
-          layout:"fitColumns",
-          pagination:"local",        // enable local pagination for demonstration
-          paginationSize:5,
-          paginationSizeSelector:[5,10],
-          columns:{columns_js_str},
+        {cell_formatter_js}
+        {row_index_formatter_js}
+        // Save full table data and column definitions for full mode
+        var fullData_{card_id} = {table_data_json};
+        var fullColumns_{card_id} = [];
+        fullColumns_{card_id}.push({{title:"Row", field:"rowIndex", width:60, formatter: rowIndexFormatter}});
+        for (var i = 0; i < 10; i++) {{
+            fullColumns_{card_id}.push({{title: "Col " + i, field:"col" + i, formatter: cellFormatter}});
+        }}
+        
+        function getSubsetData(data, startRow, endRow, startCol, endCol) {{
+            var subset = [];
+            for (var i = startRow; i < endRow; i++) {{
+                var row = data[i];
+                var newRow = {{ "rowIndex": row.rowIndex }};
+                for (var j = startCol; j < endCol; j++) {{
+                    newRow["col" + j] = row["col" + j];
+                }}
+                subset.push(newRow);
+            }}
+            return subset;
+        }}
+        
+        function getSubsetColumns(startCol, endCol) {{
+            var cols = [];
+            cols.push({{title:"Row", field:"rowIndex", width:60, formatter: rowIndexFormatter}});
+            for (var i = startCol; i < endCol; i++) {{
+                cols.push({{title: "Col " + i, field:"col" + i, formatter: cellFormatter}});
+            }}
+            return cols;
+        }}
+        
+        function buildTabulator_{card_id}(mode) {{
+            var container = document.getElementById("table-{card_id}");
+            container.innerHTML = "";
+            if (mode === "full") {{
+                new Tabulator(container, {{
+                    data: fullData_{card_id},
+                    layout:"fitColumns",
+                    pagination:"local",
+                    paginationSize:10,
+                    paginationSizeSelector:[10,20],
+                    columns: fullColumns_{card_id},
+                }});
+            }} else {{
+                // Zoom mode: show a subset around the highlighted cell using original h_row and h_col
+                var hRow = {h_row};
+                var hCol = {h_col};
+                var nrows = 10;
+                var ncols = 10;
+                var startRow = Math.max(0, hRow - 2);
+                var endRow = Math.min(nrows, hRow + 3);
+                var startCol = Math.max(0, hCol - 2);
+                var endCol = Math.min(ncols, hCol + 3);
+                var subsetData = getSubsetData(fullData_{card_id}, startRow, endRow, startCol, endCol);
+                var subsetColumns = getSubsetColumns(startCol, endCol);
+                new Tabulator(container, {{
+                    data: subsetData,
+                    layout:"fitColumns",
+                    pagination:"local",
+                    paginationSize:5,
+                    paginationSizeSelector:[5,10],
+                    columns: subsetColumns,
+                }});
+            }}
+        }}
+        
+        // Initialize in zoom mode (default) using the original highlighted cell
+        buildTabulator_{card_id}("zoom");
+        document.getElementById("table-container-{card_id}").style.pointerEvents = "none";
+        
+        // Toggle event listener for the Inspect Table switch
+        var inspectCheckbox = document.getElementById("inspect-{card_id}");
+        inspectCheckbox.addEventListener("change", function() {{
+            if (this.checked) {{
+                buildTabulator_{card_id}("full");
+                document.getElementById("table-container-{card_id}").style.pointerEvents = "auto";
+            }} else {{
+                buildTabulator_{card_id}("zoom");
+                document.getElementById("table-container-{card_id}").style.pointerEvents = "none";
+            }}
         }});
       </script>
     </div>
@@ -165,12 +198,21 @@ if not st.session_state.run_quality_folding:
         st.session_state.run_quality_folding = True
         st.rerun()
 
+# Generate cards based on labeling budget and table_locations (with replacement if needed)
 if st.session_state.run_quality_folding:
     budget = st.session_state.get("labeling_budget", 10)
-    cards = [{"id": i, "name": f"Card {i+1}"} for i in range(budget)]
+    if "table_locations" in st.session_state:
+        available = list(st.session_state.table_locations.items())  # (table, domain_fold)
+        cards = []
+        for i in range(budget):
+            table, domain_fold = random.choice(available)
+            cards.append({"id": i, "name": f"{domain_fold} – {table}"})
+    else:
+        cards = [{"id": i, "name": f"Card {i+1}"} for i in range(5)]
     
     cards_html = "".join([get_card_html(card) for card in cards])
-
+    
+    # HTML template without a background message element
     html_template = f"""
     <!DOCTYPE html>
     <html>
@@ -183,52 +225,143 @@ if st.session_state.run_quality_folding:
         <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
         <style>
           html, body {{
-            margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+            margin: 0; 
+            padding: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            overflow: hidden;
             background-color: #111;
           }}
           #tinder {{
-            width: 100vw; height: 100vh; display: flex; flex-direction: column;
-            justify-content: flex-start; align-items: center;
+            position: relative;
+            width: 100vw; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: flex-start; 
+            align-items: center;
           }}
           #progress-container {{
-            width: 90%; margin: 10px auto; text-align: center;
+            width: 90%; 
+            margin: 10px auto; 
+            text-align: center;
           }}
           #progress-bar {{
-            width: 100%; height: 20px;
+            width: 100%; 
+            height: 20px;
           }}
           #progress-text {{
-            background-color: white; display: inline-block; padding: 4px 8px;
-            border-radius: 4px; margin-top: 4px;
+            background-color: white; 
+            display: inline-block; 
+            padding: 4px 8px;
+            border-radius: 4px; 
+            margin-top: 4px;
           }}
           #tinder--cards {{
-            position: relative; width: 100%; height: 60%;
-            display: flex; justify-content: center; align-items: center;
+            position: relative; 
+            width: 100%; 
+            height: 60%;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
           }}
           .tinder--card {{
-            position: absolute; background: #333; width: 90%; height: 100%;
-            border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-            overflow: hidden; transition: 0.3s; touch-action: none; margin: 10px;
+            position: absolute; 
+            background: #fff;
+            width: 90%; 
+            height: 100%;
+            border-radius: 10px; 
+            overflow: hidden; 
+            transition: 0.3s; 
+            touch-action: none; 
+            margin: 10px;
           }}
           #tinder--buttons {{
-            width: 100%; height: 15%; display: flex; justify-content: center;
-            align-items: center; gap: 20px; margin-top: 10px;
+            width: 100%; 
+            height: 15%; 
+            display: flex; 
+            justify-content: center;
+            align-items: center; 
+            gap: 20px; 
+            margin-top: 10px;
           }}
           #tinder--buttons button {{
-            width: 80px; height: 80px; border-radius: 50%;
-            background-color: #444; color: #fff; border: 2px solid #888;
-            cursor: pointer; outline: none; font-size: 32px;
+            width: 80px; 
+            height: 80px; 
+            border-radius: 50%;
+            background-color: #444; 
+            color: #fff; 
+            border: 2px solid #888;
+            cursor: pointer; 
+            outline: none; 
+            font-size: 32px;
             transition: 0.2s;
           }}
           #tinder--buttons button:hover {{
             transform: scale(1.1);
+          }}
+          /* Modern toggle switch styles */
+          .switch {{
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+          }}
+          .switch input {{
+            opacity: 0;
+            width: 0;
+            height: 0;
+          }}
+          .slider {{
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+          }}
+          .slider:before {{
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+          }}
+          input:checked + .slider {{
+            background-color: #2196F3;
+          }}
+          input:checked + .slider:before {{
+            transform: translateX(26px);
+          }}
+          /* Modern Tabulator styling */
+          .tabulator {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+          }}
+          .tabulator .tabulator-header {{
+            background: #f4f4f4;
+            color: #333;
+            font-weight: bold;
+            border: none;
+          }}
+          .tabulator .tabulator-cell {{
+            border: 1px solid #e0e0e0;
+            padding: 4px;
           }}
         </style>
       </head>
       <body>
         <div id="tinder">
           <div id="progress-container">
-            <progress id="progress-bar" value="0" max="{budget}"></progress>
-            <div id="progress-text">0% (0/{budget})</div>
+            <progress id="progress-bar" value="0" max="{len(cards)}"></progress>
+            <div id="progress-text">0% (0/{len(cards)})</div>
           </div>
           <div id="tinder--cards">
             {cards_html}
@@ -241,7 +374,7 @@ if st.session_state.run_quality_folding:
         </div>
         <script>
           var removedCards = [];
-          var total = {budget};
+          var total = {len(cards)};
 
           function updateCards() {{
             var allCards = document.querySelectorAll('.tinder--card');
@@ -249,7 +382,7 @@ if st.session_state.run_quality_folding:
             var completed = total - remaining;
             updateProgressBar(completed);
             allCards.forEach(function(card, index) {{
-              card.style.zIndex = remaining - index;
+              card.style.zIndex = 100 + (remaining - index);
               card.style.transform = 'translate(0, 0) rotate(0)';
               card.style.opacity = 1;
             }});
@@ -335,7 +468,6 @@ if st.session_state.run_quality_folding:
             }});
           }}
 
-          // Attach Hammer to initial cards
           var initialCards = document.querySelectorAll('.tinder--card');
           initialCards.forEach(function(card) {{
             attachHammer(card);
@@ -345,6 +477,6 @@ if st.session_state.run_quality_folding:
       </body>
     </html>
     """
-
-    st.write("Swipe left/right or use the buttons to label. Each card uses Tabulator with pagination, and highlights a random cell.")
+    
+    st.write("Swipe left/right or use the buttons to label. Each card displays its Domain Fold – Cell Fold name and shows a zoomed-in view (centered on the highlighted cell). Toggle 'Inspect Table' (top right) to view the full interactive table; toggling back reverts to the original zoom view.")
     st.components.v1.html(html_template, height=800, scrolling=False)

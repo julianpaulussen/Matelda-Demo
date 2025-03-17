@@ -1,5 +1,9 @@
 import streamlit as st
 
+# Page Config (Optional)
+st.set_page_config(page_title="Scrollable Page with Fixed Bottom Div", layout="wide")
+
+
 # Hide default Streamlit menu
 st.markdown("""
     <style>
@@ -15,9 +19,6 @@ with st.sidebar:
     st.page_link("pages/Labeling.py", label="Labeling")
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
-
-# Page Config (Optional)
-st.set_page_config(page_title="Scrollable Page with Fixed Bottom Div", layout="wide")
 
 # Custom CSS to make a floating div at the bottom
 st.markdown("""
