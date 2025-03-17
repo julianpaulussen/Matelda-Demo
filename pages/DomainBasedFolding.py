@@ -77,12 +77,12 @@ if st.session_state.run_folding:
     header_cols = st.columns([4, 1, 1])
     header_cols[0].markdown("**Fold / Table**")
     # Global Merge button: when clicked, enable merge mode
-    if header_cols[1].button("Merge Domain Folds", key="global_merge_button"):
+    if header_cols[1].button("Merge Folds", key="global_merge_button"):
         st.info("Select the Domain Folds to merge.", icon="ℹ️")
         st.session_state.merge_mode = True
         st.session_state.selected_folds = []
     # Global Split button: when clicked, enable global split mode
-    if header_cols[2].button("Split Tables", key="global_split_button"):
+    if header_cols[2].button("Split Folds", key="global_split_button"):
         st.info("Select the table at which you want to split the Domain Fold. The split will occur immediately below the chosen table.", icon="ℹ️")
         st.session_state.global_split_mode = True
         st.session_state.selected_split_tables = {}
