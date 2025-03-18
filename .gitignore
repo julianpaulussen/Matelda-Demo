@@ -1,4 +1,10 @@
 /pages/__pycache__/
-pipelines/*
-!pipelines/.gitignore
 
+# Ignore everything inside pipelines/
+pipelines/*
+
+# But do not ignore the pipelines directory itself
+!pipelines/
+
+# Allow .gitignore inside pipelines/
+!pipelines/.gitignore
