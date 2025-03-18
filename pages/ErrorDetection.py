@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import time
+import os
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
@@ -23,18 +24,17 @@ with st.sidebar:
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
-# List of tables
-tables = [
-    "Sales Data",
-    "Customer Data",
-    "Inventory Data",
-    "Financial Report",
-    "Employee Data",
-    "Performance Metrics",
-    "Risk Analysis"
-]
+# Get the dataset path from session state; default to a specific folder if not set
+datasets_path = st.session_state.get("dataset_path", os.path.join(os.path.dirname(__file__), "../datasets/Quintet"))
 
-    
+# Dynamically list all subfolders in the dataset path (each subfolder represents a table)
+if os.path.exists(datasets_path):
+    tables = [table for table in os.listdir(datasets_path)
+              if os.path.isdir(os.path.join(datasets_path, table))]
+else:
+    st.error("Dataset path does not exist!")
+    tables = []
+
 if "run_error_detection" not in st.session_state:
     st.session_state.run_error_detection = False  
 
@@ -42,38 +42,53 @@ if st.button("Run Error Detection"):
     with st.spinner("🔄 Detecting errors... Please wait..."):
         time.sleep(3)  # Simulate processing delay
     st.session_state.run_error_detection = True
-    st.rerun()  # Refresh to show tables
+    st.experimental_rerun()  # Refresh to show tables
 
-# Function to generate a random table with errors
-def generate_table_with_errors(rows=8, cols=4):
-    df = pd.DataFrame(
-        np.random.randint(1, 100, size=(rows, cols)), 
-        columns=[f"Col {i+1}" for i in range(cols)]
-    )
+# Function to load the real table data and randomly mark some cells as errors
+def load_table_with_errors(table_name):
+    file_path = os.path.join(datasets_path, table_name, "clean.csv")
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
+        return df.style  # Return styled dataframe even if loading fails
 
-    # Randomly select error positions
-    num_errors = np.random.randint(2, 6)
-    error_positions = {(np.random.randint(0, rows), np.random.randint(0, cols)) for _ in range(num_errors)}
-
-    # Define function to highlight errors
+    # Randomly determine the number of errors (at least 2, up to 6 or total cell count)
+    total_cells = df.size
+    if total_cells == 0:
+        num_errors = 0
+    else:
+        num_errors = np.random.randint(2, min(6, total_cells) + 1)
+    
+    # Randomly choose cell positions to mark as errors
+    error_positions = set()
+    for _ in range(num_errors):
+        r = np.random.randint(0, df.shape[0])
+        c = np.random.randint(0, df.shape[1])
+        error_positions.add((r, c))
+    
+    # Define a style function to highlight the error cells
     def highlight_errors(data):
         df_styles = pd.DataFrame("", index=data.index, columns=data.columns)
-        for row, col in error_positions:
-            df_styles.iloc[row, col] = "background-color: red; color: white"
+        for (r, c) in error_positions:
+            try:
+                df_styles.iloc[r, c] = "background-color: red; color: white"
+            except Exception:
+                pass
         return df_styles
-
+    
     return df.style.apply(highlight_errors, axis=None)
 
-# If errors have been detected, show tables
+# If errors have been detected, display each table with errors highlighted
 if st.session_state.run_error_detection:
     st.markdown("---")
     
     for table in tables:
         with st.expander(f"📊 {table} (Errors Highlighted)"):
-            st.dataframe(generate_table_with_errors())
-
+            st.dataframe(load_table_with_errors(table))
+    
     st.markdown("---")
-
-    # Navigation button to Results page
+    
+    # Navigation button to move to the next page
     if st.button("Next"):
         st.switch_page("pages/Results.py")
