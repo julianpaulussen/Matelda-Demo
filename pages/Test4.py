@@ -47,7 +47,7 @@ def get_card_html(card):
       - In zoom mode (default, Inspect off) only a subset (centered on the highlighted cell) is shown,
         using the original highlighted cell values.
       - When toggled to Inspect, the full interactive table is rebuilt.
-      - Toggling back reverts to the original zoom view.
+      - Toggling back reverts to the original zoom view using a stored excerpt.
     """
     data_list, h_row, h_col = generate_table_data()
     table_data_json = json.dumps(data_list)
@@ -106,6 +106,10 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             fullColumns_{card_id}.push({{title: "Col " + i, field:"col" + i, formatter: cellFormatter}});
         }}
         
+        // Declare variables to store the zoom (excerpt) view data and columns
+        var zoomData_{card_id} = null;
+        var zoomColumns_{card_id} = null;
+        
         function getSubsetData(data, startRow, endRow, startCol, endCol) {{
             var subset = [];
             for (var i = startRow; i < endRow; i++) {{
@@ -141,29 +145,31 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
                     columns: fullColumns_{card_id},
                 }});
             }} else {{
-                // Zoom mode: show a subset around the highlighted cell using original h_row and h_col
-                var hRow = {h_row};
-                var hCol = {h_col};
-                var nrows = 10;
-                var ncols = 10;
-                var startRow = Math.max(0, hRow - 2);
-                var endRow = Math.min(nrows, hRow + 3);
-                var startCol = Math.max(0, hCol - 2);
-                var endCol = Math.min(ncols, hCol + 3);
-                var subsetData = getSubsetData(fullData_{card_id}, startRow, endRow, startCol, endCol);
-                var subsetColumns = getSubsetColumns(startCol, endCol);
+                // Zoom mode: use stored zoomData if available, otherwise compute it once
+                if (!zoomData_{card_id}) {{
+                    var hRow = {h_row};
+                    var hCol = {h_col};
+                    var nrows = 10;
+                    var ncols = 10;
+                    var startRow = Math.max(0, hRow - 2);
+                    var endRow = Math.min(nrows, hRow + 3);
+                    var startCol = Math.max(0, hCol - 2);
+                    var endCol = Math.min(ncols, hCol + 3);
+                    zoomData_{card_id} = getSubsetData(fullData_{card_id}, startRow, endRow, startCol, endCol);
+                    zoomColumns_{card_id} = getSubsetColumns(startCol, endCol);
+                }}
                 new Tabulator(container, {{
-                    data: subsetData,
+                    data: zoomData_{card_id},
                     layout:"fitColumns",
                     pagination:"local",
                     paginationSize:5,
                     paginationSizeSelector:[5,10],
-                    columns: subsetColumns,
+                    columns: zoomColumns_{card_id},
                 }});
             }}
         }}
         
-        // Initialize in zoom mode (default) using the original highlighted cell
+        // Initialize in zoom mode (default) using the stored zoom excerpt
         buildTabulator_{card_id}("zoom");
         document.getElementById("table-container-{card_id}").style.pointerEvents = "none";
         
