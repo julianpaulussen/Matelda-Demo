@@ -1,1 +1,4 @@
 /pages/__pycache__/
+pipelines/*
+!pipelines/.gitignore
+
