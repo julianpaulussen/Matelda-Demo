@@ -52,6 +52,16 @@ if "global_split_mode" not in st.session_state:
 if "selected_split_tables" not in st.session_state:
     st.session_state.selected_split_tables = {}  
 
+# Function to load the "clean.csv" file for a given table (i.e. subfolder)
+def load_clean_table(table_name):
+    file_path = os.path.join(datasets_path, table_name, "clean.csv")
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
+    return df
+
+
 if st.button("Run Quality Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
         time.sleep(3)  # Simulate delay

@@ -32,8 +32,10 @@ with st.sidebar:
 if "run_folding" not in st.session_state:
     st.session_state.run_folding = False
 
-# Define the datasets path for the Quintet folder
-datasets_path = os.path.join(os.path.dirname(__file__), "../datasets/Quintet")
+# Retrieve the selected dataset from configurations (defaulting to "Quintet" if not set)
+selected_dataset = st.session_state.get("table_radio", "Quintet")
+datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
+
 
 # On first run, scan the datasets folder for subdirectories and randomly assign them to 3 initial domain folds.
 if "table_locations" not in st.session_state:

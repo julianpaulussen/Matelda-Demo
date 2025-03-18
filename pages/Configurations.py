@@ -77,6 +77,8 @@ st.markdown("---")
 if st.button("Save Configurations"):
     st.session_state.config_saved = True
     st.session_state.labeling_budget = st.session_state.budget_slider
+    # Save the dataset path dynamically based on the selected dataset folder
+    st.session_state.dataset_path = os.path.join(os.path.dirname(__file__), "../datasets", st.session_state.dataset_radio)
     st.success("Configurations saved!")
 
 if st.button("Next"):
