@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import time
+import os
 
 # Set page title and layout
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
@@ -25,6 +25,9 @@ with st.sidebar:
     st.page_link("pages/Labeling.py", label="Labeling")
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
+
+# Get the dataset path from configurations; default to a hardcoded value if not set
+datasets_path = st.session_state.get("dataset_path", os.path.join(os.path.dirname(__file__), "../datasets/Quintet"))
 
 # Initialize session state variables for running the quality folding
 if "run_quality_folding" not in st.session_state:
@@ -61,19 +64,11 @@ def load_clean_table(table_name):
         df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
     return df
 
-
 if st.button("Run Quality Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
         time.sleep(3)  # Simulate delay
     st.session_state.run_quality_folding = True
     st.rerun()  # Refresh to show the tables
-
-# Function to generate random table data
-def generate_random_table(rows=6, cols=4):
-    return pd.DataFrame(
-        np.random.randint(1, 100, size=(rows, cols)), 
-        columns=[f"Col {i+1}" for i in range(cols)]
-    )
 
 if st.session_state.run_quality_folding:
     st.markdown("---")
@@ -115,7 +110,7 @@ if st.session_state.run_quality_folding:
         for table in tables:
             table_cols = st.columns([4, 1, 1])
             with table_cols[0].expander(f"Quality Based Cell Fold: {table}"):
-                st.dataframe(generate_random_table(6, 4))
+                st.dataframe(load_clean_table(table))
                 # Radio button for moving the table to a different fold
                 new_location = st.radio(
                     f"Move {table} to:",
