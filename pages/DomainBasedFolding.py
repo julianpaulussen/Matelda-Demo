@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import random
 import time
+import json
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
@@ -28,18 +29,25 @@ with st.sidebar:
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
-# Initialize session state variables if not already set
-if "run_folding" not in st.session_state:
-    st.session_state.run_folding = False
-
 # Retrieve the selected dataset from configurations (defaulting to "Quintet" if not set)
 selected_dataset = st.session_state.get("table_radio", "Quintet")
 datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
 
+# Load saved domain folds only if a pipeline is selected and table_locations is not already set.
+if "pipeline_path" in st.session_state and "table_locations" not in st.session_state:
+    pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(pipeline_config_path):
+        with open(pipeline_config_path, "r") as f:
+            pipeline_config = json.load(f)
+        if "domain_folds" in pipeline_config:
+            saved_folds = pipeline_config["domain_folds"]
+            # Convert the saved fold structure {fold: [table1, table2, ...]} into our internal mapping {table: fold}
+            st.session_state.table_locations = {
+                table: fold for fold, tables in saved_folds.items() for table in tables
+            }
 
-# On first run, scan the datasets folder for subdirectories and randomly assign them to 3 initial domain folds.
+# If table_locations is not already set (either from configuration or a previous run), assign tables randomly.
 if "table_locations" not in st.session_state:
-    # List all subdirectories (each representing a table)
     tables = [f for f in os.listdir(datasets_path) if os.path.isdir(os.path.join(datasets_path, f))]
     folds = ["Domain Fold 1", "Domain Fold 2", "Domain Fold 3"]
     st.session_state.table_locations = {table: random.choice(folds) for table in tables}
@@ -68,7 +76,7 @@ if st.button("Run Domain Based Folding"):
         time.sleep(2)
     st.session_state.run_folding = True
 
-if st.session_state.run_folding:
+if st.session_state.get("run_folding"):
     st.markdown("---")
     
     # Group tables by their assigned fold
@@ -90,7 +98,7 @@ if st.session_state.run_folding:
     
     st.markdown("---")
     
-    # Iterate over each fold
+    # Iterate over each fold and display the tables
     for fold_name, tables in domain_folds.items():
         fold_cols = st.columns([4, 1, 1])
         fold_cols[0].markdown(f"**{fold_name}**")
@@ -107,7 +115,6 @@ if st.session_state.run_folding:
         # Display each table within the fold
         for table in tables:
             table_cols = st.columns([4, 1, 1])
-            # Use an expander so that when clicked, the CSV data (clean.csv) is loaded and displayed.
             with table_cols[0].expander(f"📊 {table}"):
                 df = load_clean_table(table)
                 st.dataframe(df)
@@ -121,7 +128,6 @@ if st.session_state.run_folding:
                     st.session_state.table_locations[table] = new_location
                     st.rerun()
             table_cols[1].empty()
-            # Global split mode: allow selecting a table to split the fold.
             if st.session_state.global_split_mode:
                 split_selected = table_cols[2].checkbox("Split here", key=f"split_{fold_name}_{table}", label_visibility="hidden")
                 if fold_name not in st.session_state.selected_split_tables:
@@ -177,6 +183,25 @@ if st.session_state.run_folding:
                 st.rerun()
     
     st.markdown("---")
+    
+    # Button to save the current domain fold structure to the pipeline's configurations.json file.
+    if st.button("Save Domain Folds"):
+        if "pipeline_path" in st.session_state:
+            pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+            if os.path.exists(pipeline_config_path):
+                with open(pipeline_config_path, "r") as f:
+                    pipeline_config = json.load(f)
+            else:
+                pipeline_config = {}
+            domain_folds_to_save = {}
+            for table, fold in st.session_state.table_locations.items():
+                domain_folds_to_save.setdefault(fold, []).append(table)
+            pipeline_config["domain_folds"] = domain_folds_to_save
+            with open(pipeline_config_path, "w") as f:
+                json.dump(pipeline_config, f, indent=4)
+            st.success("Domain folds saved to pipeline configurations!")
+        else:
+            st.warning("No pipeline selected; domain folds not saved.")
     
     if st.button("Next"):
         st.switch_page("pages/QualityBasedFolding.py")

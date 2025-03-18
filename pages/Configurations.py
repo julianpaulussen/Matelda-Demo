@@ -36,14 +36,26 @@ if not os.path.exists(pipelines_folder):
 existing_pipelines = [f for f in os.listdir(pipelines_folder) if os.path.isdir(os.path.join(pipelines_folder, f))]
 
 def load_pipeline_config():
-    """Load labeling budget and dataset from the selected pipeline's configuration JSON."""
+    """
+    Load labeling budget and dataset from the selected pipeline's configuration JSON.
+    This function updates the labeling budget stored in st.session_state using the selected pipeline's configurations.
+    """
     selected = st.session_state.selected_pipeline
+    # Do nothing if the placeholder is still selected.
+    if selected == "Click here to select existing pipeline":
+        return
     pipeline_config_path = os.path.join(pipelines_folder, selected, "configurations.json")
     if os.path.exists(pipeline_config_path):
         with open(pipeline_config_path, "r") as f:
             pipeline_config = json.load(f)
+        pipeline_dataset = pipeline_config.get("selected_dataset", None)
+        current_dataset = st.session_state.get("dataset_select")
+        if current_dataset is None:
+            st.session_state.dataset_select = pipeline_dataset
+            current_dataset = pipeline_dataset
+        # Update the labeling budget from the configurations file of the selected pipeline
         st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
-        st.session_state.preconfigured_dataset = pipeline_config.get("selected_dataset", "Not defined")
+        st.session_state.preconfigured_dataset = pipeline_dataset
     else:
         st.session_state.budget_slider = 10
         st.session_state.preconfigured_dataset = "Not defined"
@@ -55,29 +67,25 @@ pipeline_choice = st.radio(
 )
 
 if pipeline_choice == "Use Existing Pipeline":
+    placeholder = "Click here to select existing pipeline"
+    pipeline_options = [placeholder] + existing_pipelines
     selected_pipeline = st.selectbox(
-        "Select an existing pipeline:", 
-        options=existing_pipelines, 
+        "Select a pipeline:",
+        options=pipeline_options,
         key="selected_pipeline",
         on_change=load_pipeline_config
     )
     
-    # On first load, load configuration if not already set.
-    if "budget_slider" not in st.session_state:
-        load_pipeline_config()
-    
-    #st.markdown("---")
-    #st.subheader("Pipeline Configuration")
-    #st.write("Selected Dataset Folder:", st.session_state.get("preconfigured_dataset", "Not defined"))
-    
     st.markdown("---")
     st.subheader("Labeling Budget")
-    # Create slider without a key and then update session state manually.
+    # Use the budget from the configurations JSON if a valid pipeline has been selected,
+    # otherwise remain with the current session state value (or a temporary default).
+    current_budget = st.session_state.get("budget_slider", 10)
     labeling_budget = st.slider(
         "Select Labeling Budget:",
         min_value=1,
         max_value=100,
-        value=st.session_state.get("budget_slider", 10),
+        value=current_budget,
         label_visibility="visible",
     )
     st.number_input(
@@ -101,14 +109,13 @@ else:
     if not dataset_options:
         st.warning("No dataset folders found in the datasets folder.")
     else:
-        # Using selectbox instead of radio buttons for dataset selection.
+        # Using selectbox for dataset selection.
         selected_dataset_folder = st.selectbox(
             "Select the dataset you want to use:",
             options=dataset_options,
             key="dataset_select",
             label_visibility="visible"
         )
-        # st.write("Selected Dataset Folder:", selected_dataset_folder)
         folder_path = os.path.join(datasets_folder, selected_dataset_folder)
         st.write("Here is some information on the dataset.")
     
@@ -161,12 +168,11 @@ else:
     
     st.markdown("---")
     st.subheader("Pipeline Name")
-
     default_pipeline_name = suggest_pipeline_folder_name(selected_dataset_folder, pipelines_folder)
     new_pipeline_name = st.text_input(
         "Enter a new pipeline name:", 
         value=default_pipeline_name
-        )
+    )
 
 # ----------------------------
 # Helper Functions for Saving Configurations
@@ -195,22 +201,29 @@ def save_config_to_json(config, folder):
 
 st.markdown("---")
 # ----------------------------
-# Save Configurations Button
+# Save and Continue Button
 # ----------------------------
-if st.button("Save Configurations"):
+if st.button("Save and Continue"):
     if pipeline_choice == "Use Existing Pipeline":
-        pipeline_folder = os.path.join(pipelines_folder, st.session_state.selected_pipeline)
-        st.session_state.pipeline_path = pipeline_folder
-        pipeline_config_path = os.path.join(pipeline_folder, "configurations.json")
-        config_to_save = {}
-        if os.path.exists(pipeline_config_path):
-            with open(pipeline_config_path, "r") as f:
-                config_to_save = json.load(f)
-        # Update the labeling budget from the slider value.
-        config_to_save["labeling_budget"] = st.session_state.get("budget_slider", labeling_budget)
-        with open(pipeline_config_path, "w") as f:
-            json.dump(config_to_save, f, indent=4)
-        st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
+        selected = st.session_state.selected_pipeline
+        if selected == "Click here to select existing pipeline":
+            st.warning("Please select an existing pipeline.")
+        else:
+            pipeline_folder = os.path.join(pipelines_folder, selected)
+            st.session_state.pipeline_path = pipeline_folder
+            pipeline_config_path = os.path.join(pipeline_folder, "configurations.json")
+            config_to_save = {}
+            if os.path.exists(pipeline_config_path):
+                with open(pipeline_config_path, "r") as f:
+                    config_to_save = json.load(f)
+            # Update the labeling budget from the slider value.
+            config_to_save["labeling_budget"] = st.session_state.get("budget_slider", labeling_budget)
+            with open(pipeline_config_path, "w") as f:
+                json.dump(config_to_save, f, indent=4)
+            st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
+            st.switch_page("pages/DomainBasedFolding.py")
+            st.rerun()
+            
     else:
         # Create a new pipeline folder and save configuration
         pipeline_folder = create_unique_pipeline_folder(new_pipeline_name, pipelines_folder)
@@ -221,6 +234,6 @@ if st.button("Save Configurations"):
         }
         save_config_to_json(config_to_save, pipeline_folder)
         st.success(f"New pipeline created and configurations saved in {pipeline_folder}!")
-
-if st.button("Next"):
-    st.switch_page("pages/DomainBasedFolding.py")
+        st.switch_page("pages/DomainBasedFolding.py")
+        st.rerun()
+        
