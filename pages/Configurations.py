@@ -1,4 +1,7 @@
 import streamlit as st
+import os
+import glob
+import pandas as pd
 
 # Hide default Streamlit menu
 st.markdown("""
@@ -17,19 +20,29 @@ with st.sidebar:
     st.page_link("pages/Results.py", label="Results")
 
 st.title("Configurations")
-st.subheader("Select a table")
+st.subheader("Select a Dataset Folder")
 
-# Table selection 
-options = ["Quintet", "DGov_NT", "WDC"]
-selected_table = st.radio(
-    "Table Selection", 
-    options, 
-    index=options.index("Quintet"), 
-    key="table_radio", 
-    label_visibility="hidden"
-)
-st.write("Information about:", selected_table)
-st.write("Here is some information about the selected table.")
+# Determine the datasets folder relative to the current file location
+datasets_folder = os.path.join(os.path.dirname(__file__), "../datasets")
+
+# List all subfolders inside the datasets folder
+dataset_options = [f for f in os.listdir(datasets_folder) if os.path.isdir(os.path.join(datasets_folder, f))]
+
+if not dataset_options:
+    st.warning("No dataset folders found in the datasets folder.")
+else:
+    selected_dataset_folder = st.radio(
+        "Dataset Selection", 
+        options=dataset_options, 
+        index=0, 
+        key="dataset_radio", 
+        label_visibility="visible"
+    )
+    st.write("Selected Dataset Folder:", selected_dataset_folder)
+    
+    # Optional: Preview the first CSV file found in the selected folder
+    folder_path = os.path.join(datasets_folder, selected_dataset_folder)
+    st.write("Here is some information on the dataset.")
 
 st.markdown("---")
 st.subheader("Select Labeling Budget")
@@ -43,7 +56,7 @@ labeling_budget = st.slider(
     "Select Labeling Budget",
     min_value=1,
     max_value=100,
-    value=st.session_state.labeling_budget,  # Use session state value here.
+    value=st.session_state.labeling_budget,
     key="budget_slider",
     label_visibility="hidden"
 )
