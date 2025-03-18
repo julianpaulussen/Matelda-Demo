@@ -21,15 +21,14 @@ with st.sidebar:
     st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
     st.page_link("pages/Labeling.py", label="Labeling")
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
-
     st.page_link("pages/Results.py", label="Results")
 
-    st.markdown("---")
-    st.markdown("### Tests")
+    #st.markdown("---")
+    #st.markdown("### Tests")
     #st.page_link("pages/Test.py", label="Test")
     #st.page_link("pages/Test3.py", label="Test 3")
-    st.page_link("pages/Test4.py", label="Test 4")
-    st.page_link("pages/Test5.py", label="Test 5")
+    #st.page_link("pages/Test6.py", label="Test 6")
+    #st.page_link("pages/Test5.py", label="Test 5")
 
 # Start Button
 if st.button("Start"):
