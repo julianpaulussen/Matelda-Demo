@@ -528,5 +528,5 @@ if st.session_state.run_quality_folding:
     </html>
     """
     
-    st.write("Swipe left/right or use the buttons to label. Each card displays its Domain Fold – Cell Fold name and shows a zoomed-in view (centered on the highlighted cell). Toggle 'Inspect Table' (top right) to view the full interactive table.")
+    st.info("Swipe left/right or use the buttons to label the sampled cell.")
     st.components.v1.html(html_template, height=800, scrolling=False)
