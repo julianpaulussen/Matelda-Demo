@@ -42,17 +42,15 @@ def generate_table_data():
 
 def get_card_html(card):
     """
-    Build HTML for one card:
-      - Generates a 10×10 table with one randomly highlighted cell.
-      - In zoom mode (default, Inspect off) only a subset (centered on the highlighted cell) is shown,
-        using the original highlighted cell values.
-      - When toggled to Inspect, the full interactive table is rebuilt.
-      - Toggling back reverts to the original zoom view using a stored excerpt.
+    Build HTML for one card with:
+      - A 10×10 table with one highlighted cell.
+      - A top row with the card name and the Inspect Table toggle (info button removed).
+      - A left-aligned section with a header "Error Detection Strategies:" and 8 pill elements labeled "Strategy01" to "Strategy08".
     """
     data_list, h_row, h_col = generate_table_data()
     table_data_json = json.dumps(data_list)
     
-    # Formatter functions with embedded h_row and h_col
+    # Formatter functions for table cells
     cell_formatter_js = f"""
 var cellFormatter = function(cell, formatterParams, onRendered) {{
     var rowVal = cell.getRow().getData().rowIndex;
@@ -78,22 +76,49 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
 }};
 """
     card_id = card["id"]
+
+    # Create eight pill elements with labels "Strategy01" to "Strategy08"
+    pills_html = "".join([
+        f'<span class="pill" id="pill-{i}-{card_id}" style="padding: 4px 8px; font-size:9px; border-radius: 16px; background: #ddd;">Strategy{(i+1):02d}</span>'
+        for i in range(8)
+    ])
+    
     return f"""
     <div class="tinder--card" id="card-{card_id}" style="position: absolute; width: 90%; height: 100%; border-radius: 10px; background: #fff; overflow: hidden; transition: 0.3s; touch-action: none; margin: 10px;">
-      <div class="table-container" id="table-container-{card_id}" style="width: 100%; height: 70%; display: flex; align-items: center; justify-content: center;">
-          <div id="table-{card_id}" style="width:95%; height:95%;"></div>
-      </div>
-      <div class="info-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px;">
-         <div class="name-container">
-           <h3 style="margin: 0; font-size: 24px;">{card['name']}</h3>
-         </div>
-         <div class="inspect-container" style="display: flex; align-items: center;">
-           <label class="switch">
-             <input type="checkbox" id="inspect-{card_id}">
-             <span class="slider round"></span>
-           </label>
-           <span style="margin-left: 8px; font-size: 14px; color: #555;">Inspect Table</span>
-         </div>
+      <div class="flip-card" style="width: 100%; height: 100%; perspective: 1000px;">
+        <div class="flip-card-inner" id="flip-card-inner-{card_id}" style="position: relative; width: 100%; height: 100%; transition: transform 0.8s ease; transform-style: preserve-3d;">
+          <!-- Front of Card -->
+          <div class="flip-card-front" style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden;">
+            <div class="table-container" id="table-container-{card_id}" style="width: 100%; height: 70%; display: flex; align-items: center; justify-content: center;">
+                <div id="table-{card_id}" style="width:95%; height:95%;"></div>
+            </div>
+            <div class="info-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px;">
+               <div class="name-container">
+                 <h3 style="margin: 0; font-size: 24px;">{card['name']}</h3>
+               </div>
+               <div class="controls-container" style="display: flex; align-items: center;">
+                 <div class="inspect-container" style="display: flex; align-items: center;">
+                   <label class="switch">
+                     <input type="checkbox" id="inspect-{card_id}">
+                     <span class="slider round"></span>
+                   </label>
+                   <span style="margin-left: 8px; font-size: 14px; color: #555;">Inspect Table</span>
+                 </div>
+               </div>
+            </div>
+            <!-- New header and pills container aligned to the left -->
+            <div class="pills-header" style="padding: 4px 10px;">
+              <h4 style="margin: 0; font-size: 16px;">Error Detection Strategies:</h4>
+            </div>
+            <div class="pills-container" style="display: flex; justify-content: flex-start; gap: 8px; padding: 4px 10px;">
+                {pills_html}
+            </div>
+          </div>
+          <!-- Back of Card (Empty) -->
+          <div class="flip-card-back" id="flip-card-back-{card_id}" style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: white; transform: rotateY(180deg);">
+            <!-- Empty backside -->
+          </div>
+        </div>
       </div>
       <script>
         {cell_formatter_js}
@@ -106,7 +131,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             fullColumns_{card_id}.push({{title: "Col " + i, field:"col" + i, formatter: cellFormatter}});
         }}
         
-        // Declare variables to store the zoom (excerpt) view data and columns
+        // Variables to store the zoom (excerpt) view data and columns
         var zoomData_{card_id} = null;
         var zoomColumns_{card_id} = null;
         
@@ -184,6 +209,25 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
                 document.getElementById("table-container-{card_id}").style.pointerEvents = "none";
             }}
         }});
+        
+        // Card flipping functionality (backside click flips back)
+        var flipCardInner = document.getElementById("flip-card-inner-{card_id}");
+        var flipCardBack = document.getElementById("flip-card-back-{card_id}");
+        
+        flipCardBack.addEventListener("click", function() {{
+            flipCardInner.style.transform = "rotateY(0deg)";
+        }});
+        
+        // Randomly highlight some pills in the pills container
+        (function() {{
+            var pills = document.querySelectorAll("#card-{card_id} .pill");
+            pills.forEach(function(pill) {{
+                if (Math.random() < 0.3) {{  // ~30% chance to highlight
+                    pill.style.backgroundColor = "#FF8C00";
+                    pill.style.color = "white";
+                }}
+            }});
+        }})();
       </script>
     </div>
     """
@@ -208,7 +252,7 @@ if not st.session_state.run_quality_folding:
 if st.session_state.run_quality_folding:
     budget = st.session_state.get("labeling_budget", 10)
     if "table_locations" in st.session_state:
-        available = list(st.session_state.table_locations.items())  # (table, domain_fold)
+        available = list(st.session_state.table_locations.items())
         cards = []
         for i in range(budget):
             table, domain_fold = random.choice(available)
@@ -218,7 +262,7 @@ if st.session_state.run_quality_folding:
     
     cards_html = "".join([get_card_html(card) for card in cards])
     
-    # HTML template without a background message element
+    # HTML template with updated styling and card flip animation
     html_template = f"""
     <!DOCTYPE html>
     <html>
@@ -484,5 +528,5 @@ if st.session_state.run_quality_folding:
     </html>
     """
     
-    st.write("Swipe left/right or use the buttons to label. Each card displays its Domain Fold – Cell Fold name and shows a zoomed-in view (centered on the highlighted cell). Toggle 'Inspect Table' (top right) to view the full interactive table; toggling back reverts to the original zoom view.")
+    st.write("Swipe left/right or use the buttons to label. Each card displays its Domain Fold – Cell Fold name and shows a zoomed-in view (centered on the highlighted cell). Toggle 'Inspect Table' (top right) to view the full interactive table.")
     st.components.v1.html(html_template, height=800, scrolling=False)
