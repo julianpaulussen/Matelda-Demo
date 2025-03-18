@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import time
 import os
+import json
 
 # Set page title and layout
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
@@ -29,20 +30,31 @@ with st.sidebar:
 # Get the dataset path from configurations; default to a hardcoded value if not set
 datasets_path = st.session_state.get("dataset_path", os.path.join(os.path.dirname(__file__), "../datasets/Quintet"))
 
-# Initialize session state variables for running the quality folding
+# --- Load previously saved quality folds if available ---
+if "pipeline_path" in st.session_state and "table_locations" not in st.session_state:
+    pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(pipeline_config_path):
+        with open(pipeline_config_path, "r") as f:
+            pipeline_config = json.load(f)
+        if "quality_folds" in pipeline_config:
+            saved_folds = pipeline_config["quality_folds"]
+            # Convert the saved fold structure {fold: [table1, table2, ...]} into our internal mapping {table: fold}
+            st.session_state.table_locations = {table: fold for fold, tables in saved_folds.items() for table in tables}
+
+# Initialize session state variables for running the quality folding if not already set
 if "run_quality_folding" not in st.session_state:
     st.session_state.run_quality_folding = False
 
 # Initialize table_locations if not already set
 if "table_locations" not in st.session_state:
     st.session_state.table_locations = {
-        "Sales Data": "Domain Fold 1",
-        "Customer Data": "Domain Fold 1",
-        "Inventory Data": "Domain Fold 1",
-        "Financial Report": "Domain Fold 2",
-        "Employee Data": "Domain Fold 2",
-        "Performance Metrics": "Domain Fold 3",
-        "Risk Analysis": "Domain Fold 3"
+        "Sales Data": "Quality Fold 1",
+        "Customer Data": "Quality Fold 1",
+        "Inventory Data": "Quality Fold 1",
+        "Financial Report": "Quality Fold 2",
+        "Employee Data": "Quality Fold 2",
+        "Performance Metrics": "Quality Fold 3",
+        "Risk Analysis": "Quality Fold 3"
     }
 
 # Ensure merging and splitting related session state variables are available
@@ -178,6 +190,25 @@ if st.session_state.run_quality_folding:
                 st.rerun()
     
     st.markdown("---")
+    
+    # NEW: Button to save the current quality fold structure to the pipeline's configurations.json file.
+    if st.button("Save Quality Folds"):
+        if "pipeline_path" in st.session_state:
+            pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+            if os.path.exists(pipeline_config_path):
+                with open(pipeline_config_path, "r") as f:
+                    pipeline_config = json.load(f)
+            else:
+                pipeline_config = {}
+            quality_folds_to_save = {}
+            for table, fold in st.session_state.table_locations.items():
+                quality_folds_to_save.setdefault(fold, []).append(table)
+            pipeline_config["quality_folds"] = quality_folds_to_save
+            with open(pipeline_config_path, "w") as f:
+                json.dump(pipeline_config, f, indent=4)
+            st.success("Quality folds saved to pipeline configurations!")
+        else:
+            st.warning("No pipeline selected; quality folds not saved.")
     
     if st.button("Next"):
         st.switch_page("pages/Labeling.py")

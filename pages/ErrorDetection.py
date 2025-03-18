@@ -42,7 +42,7 @@ if st.button("Run Error Detection"):
     with st.spinner("🔄 Detecting errors... Please wait..."):
         time.sleep(3)  # Simulate processing delay
     st.session_state.run_error_detection = True
-    st.experimental_rerun()  # Refresh to show tables
+    st.run()  # Refresh to show tables
 
 # Function to load the real table data and randomly mark some cells as errors
 def load_table_with_errors(table_name):
