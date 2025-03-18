@@ -1,8 +1,9 @@
 import streamlit as st
 import random
-import numpy as np
 import time
 import json
+import pandas as pd
+import os
 
 # Hide default Streamlit menu
 st.markdown("""
@@ -20,45 +21,67 @@ with st.sidebar:
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
-def generate_table_data():
+# ----------------------------------------------------------------------------
+# Helper functions to load actual CSV data from the corresponding table folder
+# ----------------------------------------------------------------------------
+
+def get_table_data(table_name):
     """
-    Generate a 10×10 table of random integers, plus a randomly chosen 'highlighted' cell.
-    Returns:
-      data_list  - the table data as a list of dicts (for Tabulator)
-      h_row      - highlighted row index
-      h_col      - highlighted column index
+    Loads the clean.csv file from datasets/Quintet/<table_name>/clean.csv.
+    Inserts a 'rowIndex' column and returns:
+      - data_list: list of row dicts for Tabulator,
+      - h_row: a randomly chosen row index for highlighting,
+      - h_col_name: a randomly chosen column name (excluding rowIndex) for highlighting.
     """
-    nrows, ncols = 10, 10
-    arr = np.random.randint(1, 100, (nrows, ncols))
-    h_row = random.randint(0, nrows - 1)
-    h_col = random.randint(0, ncols - 1)
-    data_list = []
-    for r in range(nrows):
-        row_dict = {"rowIndex": r}
-        for c in range(ncols):
-            row_dict[f"col{c}"] = int(arr[r, c])
-        data_list.append(row_dict)
-    return data_list, h_row, h_col
+    datasets_path = os.path.join(os.path.dirname(__file__), "../datasets/Quintet")
+    file_path = os.path.join(datasets_path, table_name, "clean.csv")
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
+    # Insert rowIndex as first column
+    df.insert(0, "rowIndex", range(len(df)))
+    data_list = df.to_dict(orient="records")
+    nrows = len(df)
+    keys = list(df.columns)
+    if len(keys) > 1:
+        h_col_name = random.choice(keys[1:])  # choose from non-rowIndex columns
+    else:
+        h_col_name = None
+    h_row = random.randint(0, nrows - 1) if nrows > 0 else 0
+    return data_list, h_row, h_col_name
+
+# ----------------------------------------------------------------------------
+# Build card HTML using the actual table data
+# ----------------------------------------------------------------------------
 
 def get_card_html(card):
-    """
-    Build HTML for one card with:
-      - A 10×10 table with one highlighted cell.
-      - A top row with the card name and the Inspect Table toggle (info button removed).
-      - A left-aligned section with a header "Error Detection Strategies:" and 8 pill elements labeled "Strategy01" to "Strategy08".
-    """
-    data_list, h_row, h_col = generate_table_data()
+    table_name = card["table"]
+    data_list, h_row, h_col_name = get_table_data(table_name)
     table_data_json = json.dumps(data_list)
     
+    # Build column definitions dynamically based on CSV headers.
+    if data_list:
+        keys = list(data_list[0].keys())
+    else:
+        keys = []
+    columns_js = []
+    for key in keys:
+        if key == "rowIndex":
+            columns_js.append(f'{{title:"{key}", field:"{key}", width:60, formatter: rowIndexFormatter}}')
+        else:
+            columns_js.append(f'{{title:"{key}", field:"{key}", formatter: cellFormatter}}')
+    fullColumns_js = "[" + ",".join(columns_js) + "]"
+
     # Formatter functions for table cells
     cell_formatter_js = f"""
 var cellFormatter = function(cell, formatterParams, onRendered) {{
     var rowVal = cell.getRow().getData().rowIndex;
     var colField = cell.getColumn().getField();
     var val = cell.getValue();
-    if(rowVal == {h_row} && colField == "col{h_col}") {{
+    if(rowVal == {h_row} && colField == "{h_col_name}") {{
        return "<div style='background-color: #FF8C00; color:white; padding:4px;'>" + val + "</div>";
-    }} else if(rowVal == {h_row} || colField == "col{h_col}") {{
+    }} else if(rowVal == {h_row} || colField == "{h_col_name}") {{
        return "<div style='background-color: #FFDAB9; padding:4px;'>" + val + "</div>";
     }} else {{
        return val;
@@ -125,11 +148,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
         {row_index_formatter_js}
         // Save full table data and column definitions for full mode
         var fullData_{card_id} = {table_data_json};
-        var fullColumns_{card_id} = [];
-        fullColumns_{card_id}.push({{title:"Row", field:"rowIndex", width:60, formatter: rowIndexFormatter}});
-        for (var i = 0; i < 10; i++) {{
-            fullColumns_{card_id}.push({{title: "Col " + i, field:"col" + i, formatter: cellFormatter}});
-        }}
+        var fullColumns_{card_id} = {fullColumns_js};
         
         // Variables to store the zoom (excerpt) view data and columns
         var zoomData_{card_id} = null;
@@ -140,8 +159,10 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             for (var i = startRow; i < endRow; i++) {{
                 var row = data[i];
                 var newRow = {{ "rowIndex": row.rowIndex }};
+                var keys = Object.keys(row);
                 for (var j = startCol; j < endCol; j++) {{
-                    newRow["col" + j] = row["col" + j];
+                    var key = keys[j];
+                    newRow[key] = row[key];
                 }}
                 subset.push(newRow);
             }}
@@ -150,9 +171,9 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
         
         function getSubsetColumns(startCol, endCol) {{
             var cols = [];
-            cols.push({{title:"Row", field:"rowIndex", width:60, formatter: rowIndexFormatter}});
+            var keys = fullColumns_{card_id};
             for (var i = startCol; i < endCol; i++) {{
-                cols.push({{title: "Col " + i, field:"col" + i, formatter: cellFormatter}});
+                cols.push(keys[i]);
             }}
             return cols;
         }}
@@ -173,15 +194,12 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
                 // Zoom mode: use stored zoomData if available, otherwise compute it once
                 if (!zoomData_{card_id}) {{
                     var hRow = {h_row};
-                    var hCol = {h_col};
-                    var nrows = 10;
-                    var ncols = 10;
+                    var keys = Object.keys(fullData_{card_id}[0]);
+                    var ncols = keys.length;
                     var startRow = Math.max(0, hRow - 2);
-                    var endRow = Math.min(nrows, hRow + 3);
-                    var startCol = Math.max(0, hCol - 2);
-                    var endCol = Math.min(ncols, hCol + 3);
-                    zoomData_{card_id} = getSubsetData(fullData_{card_id}, startRow, endRow, startCol, endCol);
-                    zoomColumns_{card_id} = getSubsetColumns(startCol, endCol);
+                    var endRow = Math.min(fullData_{card_id}.length, hRow + 3);
+                    zoomData_{card_id} = getSubsetData(fullData_{card_id}, startRow, endRow, 0, ncols);
+                    zoomColumns_{card_id} = fullColumns_{card_id}; // use full columns for zoom
                 }}
                 new Tabulator(container, {{
                     data: zoomData_{card_id},
@@ -194,7 +212,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             }}
         }}
         
-        // Initialize in zoom mode (default) using the stored zoom excerpt
+        // Initialize in zoom mode (default)
         buildTabulator_{card_id}("zoom");
         document.getElementById("table-container-{card_id}").style.pointerEvents = "none";
         
@@ -222,7 +240,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
         (function() {{
             var pills = document.querySelectorAll("#card-{card_id} .pill");
             pills.forEach(function(pill) {{
-                if (Math.random() < 0.3) {{  // ~30% chance to highlight
+                if (Math.random() < 0.3) {{
                     pill.style.backgroundColor = "#FF8C00";
                     pill.style.color = "white";
                 }}
@@ -233,7 +251,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
     """
 
 # ----------------------------------------------------------------------------
-# Streamlit App
+# Streamlit App: Generate Cards and Display the HTML Template
 # ----------------------------------------------------------------------------
 
 if "run_quality_folding" not in st.session_state:
@@ -256,9 +274,9 @@ if st.session_state.run_quality_folding:
         cards = []
         for i in range(budget):
             table, domain_fold = random.choice(available)
-            cards.append({"id": i, "name": f"{domain_fold} – {table}"})
+            cards.append({"id": i, "name": f"{domain_fold} – {table}", "table": table})
     else:
-        cards = [{"id": i, "name": f"Card {i+1}"} for i in range(5)]
+        cards = [{"id": i, "name": f"Card {i+1}", "table": None} for i in range(5)]
     
     cards_html = "".join([get_card_html(card) for card in cards])
     

@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+import os
+import random
 import time
 
 # Set the page title and layout
@@ -8,12 +9,16 @@ st.set_page_config(page_title="Domain Based Folding", layout="wide")
 st.title("Domain Based Folding")
 
 # Hide default Streamlit menu
-st.markdown("""
+st.markdown(
+    """
     <style>
         [data-testid="stSidebarNav"] {display: none;}
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
+# Sidebar navigation
 with st.sidebar:
     st.page_link("app.py", label="Matelda")
     st.page_link("pages/Configurations.py", label="Configurations")
@@ -23,65 +28,59 @@ with st.sidebar:
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
-# Initialize session state variables
+# Initialize session state variables if not already set
 if "run_folding" not in st.session_state:
-    st.session_state.run_folding = False  
+    st.session_state.run_folding = False
 
+# Define the datasets path for the Quintet folder
+datasets_path = os.path.join(os.path.dirname(__file__), "../datasets/Quintet")
+
+# On first run, scan the datasets folder for subdirectories and randomly assign them to 3 initial domain folds.
 if "table_locations" not in st.session_state:
-    st.session_state.table_locations = {
-        "Sales Data": "Domain Fold 1",
-        "Customer Data": "Domain Fold 1",
-        "Inventory Data": "Domain Fold 1",
-        "Financial Report": "Domain Fold 2",
-        "Employee Data": "Domain Fold 2",
-        "Performance Metrics": "Domain Fold 3",
-        "Risk Analysis": "Domain Fold 3"
-    }
+    # List all subdirectories (each representing a table)
+    tables = [f for f in os.listdir(datasets_path) if os.path.isdir(os.path.join(datasets_path, f))]
+    folds = ["Domain Fold 1", "Domain Fold 2", "Domain Fold 3"]
+    st.session_state.table_locations = {table: random.choice(folds) for table in tables}
 
 if "merge_mode" not in st.session_state:
-    st.session_state.merge_mode = False  
-
+    st.session_state.merge_mode = False
 if "selected_folds" not in st.session_state:
-    st.session_state.selected_folds = []  
-
-# Global split mode (for tables across folds)
+    st.session_state.selected_folds = []
 if "global_split_mode" not in st.session_state:
-    st.session_state.global_split_mode = False  
-
+    st.session_state.global_split_mode = False
 if "selected_split_tables" not in st.session_state:
-    # This will be a dict with key = fold name, value = list of table names selected for splitting
-    st.session_state.selected_split_tables = {}  
+    st.session_state.selected_split_tables = {}
 
-# Button to start processing
+# Function to load the "clean.csv" file for a given table (i.e. subfolder)
+def load_clean_table(table_name):
+    file_path = os.path.join(datasets_path, table_name, "clean.csv")
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
+    return df
+
+# Button to start domain folding
 if st.button("Run Domain Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
-        time.sleep(2)  
-    st.session_state.run_folding = True  
+        time.sleep(2)
+    st.session_state.run_folding = True
 
 if st.session_state.run_folding:
     st.markdown("---")
     
-    # Function to generate a random table for display
-    def generate_random_table(rows=5, cols=4):
-        return pd.DataFrame(
-            np.random.randint(1, 100, size=(rows, cols)), 
-            columns=[f"Col {i+1}" for i in range(cols)]
-        )
-    
-    # Group tables by their fold
+    # Group tables by their assigned fold
     domain_folds = {}
     for table, fold in st.session_state.table_locations.items():
         domain_folds.setdefault(fold, []).append(table)
     
-    # HEADER ROW with global action buttons
+    # HEADER: Global action buttons for merging and splitting folds
     header_cols = st.columns([4, 1, 1])
     header_cols[0].markdown("**Fold / Table**")
-    # Global Merge button: when clicked, enable merge mode
     if header_cols[1].button("Merge Folds", key="global_merge_button"):
         st.info("Select the Domain Folds to merge.", icon="ℹ️")
         st.session_state.merge_mode = True
         st.session_state.selected_folds = []
-    # Global Split button: when clicked, enable global split mode
     if header_cols[2].button("Split Folds", key="global_split_button"):
         st.info("Select the table at which you want to split the Domain Fold. The split will occur immediately below the chosen table.", icon="ℹ️")
         st.session_state.global_split_mode = True
@@ -91,7 +90,6 @@ if st.session_state.run_folding:
     
     # Iterate over each fold
     for fold_name, tables in domain_folds.items():
-        # Row for the fold name with merge checkbox if merge mode is active
         fold_cols = st.columns([4, 1, 1])
         fold_cols[0].markdown(f"**{fold_name}**")
         if st.session_state.merge_mode:
@@ -102,15 +100,15 @@ if st.session_state.run_folding:
                 st.session_state.selected_folds.remove(fold_name)
         else:
             fold_cols[1].empty()
-        # (For fold rows we do not need a split button now; split is handled globally.)
         fold_cols[2].empty()
         
-        # Now add a row for each table in this fold
+        # Display each table within the fold
         for table in tables:
             table_cols = st.columns([4, 1, 1])
-            # Left column: an expander with the table and a radio to move it if desired
+            # Use an expander so that when clicked, the CSV data (clean.csv) is loaded and displayed.
             with table_cols[0].expander(f"📊 {table}"):
-                st.dataframe(generate_random_table(8, 4))
+                df = load_clean_table(table)
+                st.dataframe(df)
                 new_location = st.radio(
                     f"Move {table} to:",
                     options=list(domain_folds.keys()),
@@ -120,12 +118,10 @@ if st.session_state.run_folding:
                 if new_location != st.session_state.table_locations[table]:
                     st.session_state.table_locations[table] = new_location
                     st.rerun()
-            # Middle column: no merge control on table rows
             table_cols[1].empty()
-            # Right column: if global split mode is active, show a split checkbox
+            # Global split mode: allow selecting a table to split the fold.
             if st.session_state.global_split_mode:
                 split_selected = table_cols[2].checkbox("Split here", key=f"split_{fold_name}_{table}", label_visibility="hidden")
-                # Initialize the list for this fold if not already
                 if fold_name not in st.session_state.selected_split_tables:
                     st.session_state.selected_split_tables[fold_name] = []
                 selected_tables = st.session_state.selected_split_tables[fold_name]
@@ -140,7 +136,7 @@ if st.session_state.run_folding:
     
     st.markdown("---")
     
-    # Global Confirm Merge if merge mode is active and more than one fold is selected
+    # Global Confirm Merge: if merge mode is active and more than one fold is selected.
     if st.session_state.merge_mode and len(st.session_state.selected_folds) > 1:
         merge_confirm_cols = st.columns([4, 1, 1])
         if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge"):
@@ -152,19 +148,15 @@ if st.session_state.run_folding:
             st.session_state.merge_mode = False
             st.rerun()
     
-    # Global Confirm Split if global split mode is active and at least one table is selected
+    # Global Confirm Split: if split mode is active and at least one table is selected.
     if st.session_state.global_split_mode:
-        # Check if at least one table is selected for splitting
         any_split = any(st.session_state.selected_split_tables.get(fold, []) for fold in st.session_state.selected_split_tables)
         if any_split:
             split_confirm_cols = st.columns([4, 1, 1])
             if split_confirm_cols[2].button("Confirm Split", key="confirm_split"):
-                # Process splits fold by fold
                 for fold_name, selected_tables in st.session_state.selected_split_tables.items():
                     if selected_tables:
-                        # Get the list of tables currently in this fold (in their display order)
                         tables_in_fold = domain_folds.get(fold_name, [])
-                        # Find the indices of selected tables (sorted)
                         indices = sorted([tables_in_fold.index(t) for t in selected_tables if t in tables_in_fold])
                         new_folds = []
                         prev_idx = 0
