@@ -52,16 +52,13 @@ def load_pipeline_config():
         with open(pipeline_config_path, "r") as f:
             pipeline_config = json.load(f)
         pipeline_dataset = pipeline_config.get("selected_dataset", None)
-        # Get the dataset currently selected in the UI (from the expander menu)
+        # Get the dataset currently selected in the UI (from the selectbox, which writes to st.session_state.dataset_select)
         current_dataset = st.session_state.get("dataset_select")
         if current_dataset is None:
-            st.session_state.dataset_select = pipeline_dataset
+            # If not set, fall back to the configuration value.
             current_dataset = pipeline_dataset
-        # If the configuration dataset and the UI dataset match, update the labeling budget
-        if pipeline_dataset == current_dataset:
-            st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
-        else:
-            st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
+        # Update the budget regardless
+        st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
         st.session_state.preconfigured_dataset = pipeline_dataset
     else:
         st.session_state.budget_slider = 10
@@ -118,6 +115,7 @@ else:
     if not dataset_options:
         st.warning("No dataset folders found in the datasets folder.")
     else:
+        # The selectbox widget writes its value into st.session_state['dataset_select']
         selected_dataset_folder = st.selectbox(
             "Select the dataset you want to use:",
             options=dataset_options,
@@ -176,7 +174,7 @@ else:
     
     st.markdown("---")
     st.subheader("Pipeline Name")
-    default_pipeline_name = suggest_pipeline_folder_name(selected_dataset_folder, pipelines_folder)
+    default_pipeline_name = suggest_pipeline_folder_name(st.session_state.get("dataset_select", "dataset"), pipelines_folder)
     new_pipeline_name = st.text_input(
         "Enter a new pipeline name:", 
         value=default_pipeline_name
@@ -224,6 +222,7 @@ if st.button("Save and Continue"):
                 with open(pipeline_config_path, "r") as f:
                     config_to_save = json.load(f)
             config_to_save["labeling_budget"] = st.session_state.get("budget_slider", labeling_budget)
+            config_to_save["selected_dataset"] = st.session_state.get("dataset_select")
             with open(pipeline_config_path, "w") as f:
                 json.dump(config_to_save, f, indent=4)
             st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
@@ -232,7 +231,7 @@ if st.button("Save and Continue"):
         pipeline_folder = create_unique_pipeline_folder(new_pipeline_name, pipelines_folder)
         st.session_state.pipeline_path = pipeline_folder
         config_to_save = {
-            "selected_dataset": selected_dataset_folder,
+            "selected_dataset": st.session_state.get("dataset_select"),
             "labeling_budget": st.session_state.get("budget_slider", labeling_budget),
         }
         save_config_to_json(config_to_save, pipeline_folder)
