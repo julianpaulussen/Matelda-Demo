@@ -78,7 +78,7 @@ def load_clean_table(table_name):
     return df
 
 # Button to start domain folding
-if st.button("Run Domain Based Folding"):
+if st.button("▶️ Run Domain Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
         time.sleep(2)
     st.session_state.run_folding = True
@@ -95,11 +95,11 @@ if st.session_state.get("run_folding"):
     header_cols = st.columns([4, 1, 1])
     header_cols[0].markdown("**Fold / Table**")
     if header_cols[1].button("Merge Folds", key="global_merge_button"):
-        st.info("Select the Domain Folds to merge.", icon="ℹ️")
+        st.info("Merge Folds: Combine multiple domain folds into one. Select the folds you wish to merge, and all tables from those folds will be grouped under a single fold.", icon="ℹ️")
         st.session_state.merge_mode = True
         st.session_state.selected_folds = []
     if header_cols[2].button("Split Folds", key="global_split_button"):
-        st.info("Select the table at which you want to split the Domain Fold. The split will occur immediately below the chosen table.", icon="ℹ️")
+        st.info("Split Folds: Divide a domain fold into separate folds. Choose the tables at which you want the split to occur; the folds will be split immediately below the selected tables, separating the tables into multiple groups.", icon="ℹ️")
         st.session_state.global_split_mode = True
         st.session_state.selected_split_tables = {}
     
@@ -162,6 +162,7 @@ if st.session_state.get("run_folding"):
             st.session_state.selected_folds = []
             st.session_state.merge_mode = False
             st.rerun()
+        st.markdown("---")
     
     # Global Confirm Split: if split mode is active and at least one table is selected.
     if st.session_state.global_split_mode:
@@ -188,8 +189,7 @@ if st.session_state.get("run_folding"):
                 st.session_state.global_split_mode = False
                 st.session_state.selected_split_tables = {}
                 st.rerun()
-    
-    st.markdown("---")
+            st.markdown("---")
     
     # Button to save the current domain fold structure to the pipeline's configurations.json file.
     if st.button("Save Domain Folds"):

@@ -276,7 +276,7 @@ if "run_quality_folding" not in st.session_state:
 st.title("Labeling")
 
 if not st.session_state.run_quality_folding:
-    if st.button("Run Labling"):
+    if st.button("Run Labeling"):
         with st.spinner("🔄 Processing... Please wait..."):
             time.sleep(3)
         st.session_state.run_quality_folding = True

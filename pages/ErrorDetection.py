@@ -38,7 +38,7 @@ else:
 if "run_error_detection" not in st.session_state:
     st.session_state.run_error_detection = False  
 
-if st.button("Run Error Detection"):
+if st.button("▶️ Run Error Detection"):
     with st.spinner("🔄 Detecting errors... Please wait..."):
         time.sleep(3)  # Simulate processing delay
     st.session_state.run_error_detection = True
