@@ -583,7 +583,18 @@ if st.session_state.run_quality_folding:
     </html>
     """
     
-    st.info("Swipe left/right or use the buttons to label the sampled cell. If you are done, continue with the Next-Button below the cards.")
+    st.info(
+        """
+        **Labeling Instructions:**  
+        - **Swipe:** Swipe left on a card to mark it as "dislike" and swipe right to mark it as "like".  
+        - **Buttons:**  
+          - Click the **x** button to register a "dislike".  
+          - Click the **✓** button to register a "like".  
+          - Click the **↷** button to undo your last action.  
+        - Once you have labeled the sampled cell on the card, click the **Next** button below to proceed.
+        """,
+        icon="ℹ️"
+    )
     st.components.v1.html(html_template, height=800, scrolling=False)
 
     st.markdown("---")
