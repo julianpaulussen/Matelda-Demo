@@ -104,7 +104,6 @@ if st.button("▶️ Run Quality Based Folding"):
     st.rerun()
 
 if not st.session_state.run_quality_folding:
-    st.info("Click ▶️ to begin.")
     st.stop()
 
 st.markdown("---")

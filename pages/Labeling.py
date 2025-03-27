@@ -147,6 +147,11 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             <div class="pills-container" style="display: flex; justify-content: flex-start; gap: 8px; padding: 4px 10px;">
                 {pills_html}
             </div>
+            <hr style="margin: 12px 10px; border: 0; border-top: 1px solid #ccc;" />
+            <div class="button-container" style="padding: 4px 10px; display: flex; gap: 8px;">
+              <button id="show-domain-fold" style="padding: 6px 12px;">Show Domain Fold</button>
+              <button id="show-cell-fold" style="padding: 6px 12px;">Show Cell Fold</button>
+            </div>
           </div>
           <!-- Back of Card (Empty) -->
           <div class="flip-card-back" id="flip-card-back-{card_id}" style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: white; transform: rotateY(180deg);">
@@ -268,10 +273,10 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
 if "run_quality_folding" not in st.session_state:
     st.session_state.run_quality_folding = False
 
-st.title("Quality Based Folding")
+st.title("Labeling")
 
 if not st.session_state.run_quality_folding:
-    if st.button("Run Quality Based Folding"):
+    if st.button("Run Labling"):
         with st.spinner("🔄 Processing... Please wait..."):
             time.sleep(3)
         st.session_state.run_quality_folding = True
@@ -339,7 +344,7 @@ if st.session_state.run_quality_folding:
           #tinder--cards {{
             position: relative; 
             width: 100%; 
-            height: 60%;
+            height: 70%;
             display: flex; 
             justify-content: center; 
             align-items: center;
