@@ -128,7 +128,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             </div>
             <div class="info-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px;">
                <div class="name-container">
-                 <h3 style="margin: 0; font-size: 24px;">{card['name']}</h3>
+                 <h3 style="margin: 0;  font-size: 24px;">{card['name']}</h3>
                </div>
                <div class="controls-container" style="display: flex; align-items: center;">
                  <div class="inspect-container" style="display: flex; align-items: center;">
