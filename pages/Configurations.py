@@ -52,10 +52,11 @@ def load_pipeline_config():
         with open(pipeline_config_path, "r") as f:
             pipeline_config = json.load(f)
         pipeline_dataset = pipeline_config.get("selected_dataset", None)
+        current_dataset = st.session_state.get("dataset_select")
         # Get the dataset currently selected in the UI (from the selectbox, which writes to st.session_state.dataset_select)
         current_dataset = st.session_state.get("dataset_select")
-        if current_dataset is None:
-            # If not set, fall back to the configuration value.
+        if current_dataset is None and pipeline_dataset:
+            st.session_state["dataset_select"] = pipeline_dataset
             current_dataset = pipeline_dataset
         # Update the budget regardless
         st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
