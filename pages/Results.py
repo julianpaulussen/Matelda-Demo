@@ -63,7 +63,7 @@ if st.button("Save Result"):
         with open(pipeline_config_path, "w") as f:
             json.dump(config, f, indent=4)
         st.success("Result saved!")
-        st.experimental_rerun()  # Refresh the page to update the table
+        st.rerun()  # Refresh the page to update the table
     else:
         st.warning("No pipeline selected; result not saved.")
 

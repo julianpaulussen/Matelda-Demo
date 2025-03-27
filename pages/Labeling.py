@@ -296,7 +296,7 @@ if st.session_state.run_quality_folding:
     
     cards_html = "".join([get_card_html(card) for card in cards])
     
-    # HTML template with updated styling and card flip animation
+    # HTML template with updated styling, new buttons, and card flip animation
     html_template = f"""
     <!DOCTYPE html>
     <html>
@@ -344,7 +344,7 @@ if st.session_state.run_quality_folding:
           #tinder--cards {{
             position: relative; 
             width: 100%; 
-            height: 70%;
+            height: 100%;
             display: flex; 
             justify-content: center; 
             align-items: center;
@@ -360,29 +360,50 @@ if st.session_state.run_quality_folding:
             touch-action: none; 
             margin: 10px;
           }}
-          #tinder--buttons {{
-            width: 100%; 
-            height: 15%; 
-            display: flex; 
+          /* New buttons styling */
+          .buttons {{
+            display: flex;
+            gap: 16px;
             justify-content: center;
-            align-items: center; 
-            gap: 20px; 
-            margin-top: 10px;
+            align-items: center;
+            margin-top: 20px;
           }}
-          #tinder--buttons button {{
-            width: 80px; 
-            height: 80px; 
+          .btn {{
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            background-color: #444; 
-            color: #fff; 
-            border: 2px solid #888;
-            cursor: pointer; 
-            outline: none; 
-            font-size: 32px;
-            transition: 0.2s;
+            border: 2px solid;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.2s;
           }}
-          #tinder--buttons button:hover {{
+          .btn:hover {{
             transform: scale(1.1);
+          }}
+          .btn-no {{
+            border-color: #ff5252;
+            color: #ff5252;
+          }}
+          .btn-no::before {{
+            content: "x";
+          }}
+          .btn-yes {{
+            border-color: #4caf50;
+            color: #4caf50;
+          }}
+          .btn-yes::before {{
+            content: "✓";
+          }}
+          .btn-back {{
+            border-color: #999999;
+            color: #999999;
+          }}
+          .btn-back::before {{
+            content: "↷";
           }}
           /* Modern toggle switch styles */
           .switch {{
@@ -450,10 +471,10 @@ if st.session_state.run_quality_folding:
           <div id="tinder--cards">
             {cards_html}
           </div>
-          <div id="tinder--buttons">
-            <button id="dislike">👎</button>
-            <button id="back">↩️</button>
-            <button id="like">👍</button>
+          <div class="buttons">
+            <button class="btn btn-no"></button>
+            <button class="btn btn-back"></button>
+            <button class="btn btn-yes"></button>
           </div>
         </div>
         <script>
@@ -498,13 +519,13 @@ if st.session_state.run_quality_folding:
             }}, 300);
           }}
 
-          document.getElementById('dislike').addEventListener('click', function() {{
+          document.querySelector('.btn-no').addEventListener('click', function() {{
             removeCard(false);
           }});
-          document.getElementById('like').addEventListener('click', function() {{
+          document.querySelector('.btn-yes').addEventListener('click', function() {{
             removeCard(true);
           }});
-          document.getElementById('back').addEventListener('click', function() {{
+          document.querySelector('.btn-back').addEventListener('click', function() {{
             if (removedCards.length > 0) {{
               var card = removedCards.pop();
               var cardsContainer = document.getElementById('tinder--cards');
