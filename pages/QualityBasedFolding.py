@@ -26,9 +26,17 @@ with st.sidebar:
     st.page_link("pages/Labeling.py", label="Labeling")
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
+    
+# Add at the top before using dataset_select
+if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
+    config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            config = json.load(f)
+        st.session_state["dataset_select"] = config.get("selected_dataset", "Quintet")
 
-# Get the dataset path from configurations; default to a hardcoded value if not set
-datasets_path = st.session_state.get("dataset_path", os.path.join(os.path.dirname(__file__), "../datasets/Quintet"))
+selected_dataset = st.session_state.get("dataset_select", "Quintet")
+datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
 
 # --- Load previously saved quality folds if available ---
 if "pipeline_path" in st.session_state and "table_locations" not in st.session_state:

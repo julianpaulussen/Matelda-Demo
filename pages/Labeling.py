@@ -33,7 +33,18 @@ def get_table_data(table_name):
       - h_row: a randomly chosen row index for highlighting,
       - h_col_name: a randomly chosen column name (excluding rowIndex) for highlighting.
     """
-    datasets_path = os.path.join(os.path.dirname(__file__), "../datasets/Quintet")
+    
+    # Add before using dataset
+    if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
+        config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+        if os.path.exists(config_path):
+            with open(config_path) as f:
+                config = json.load(f)
+            st.session_state["dataset_select"] = config.get("selected_dataset", "Quintet")
+
+    selected_dataset = st.session_state.get("dataset_select", "Quintet")
+    datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
+
     file_path = os.path.join(datasets_path, table_name, "clean.csv")
     try:
         df = pd.read_csv(file_path)

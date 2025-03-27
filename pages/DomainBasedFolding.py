@@ -29,8 +29,15 @@ with st.sidebar:
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
-# Retrieve the selected dataset from configurations (defaulting to "Quintet" if not set)
-selected_dataset = st.session_state.get("table_radio", "Quintet")
+# 🔄 Load dataset from pipeline config if not already in session_state
+if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
+    config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            config = json.load(f)
+        st.session_state["dataset_select"] = config.get("selected_dataset", "Quintet")
+
+selected_dataset = st.session_state.get("dataset_select", "Quintet")
 datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
 
 # Load saved domain folds only if a pipeline is selected and table_locations is not already set.
