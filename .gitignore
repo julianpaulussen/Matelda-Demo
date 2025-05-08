@@ -1,10 +1,72 @@
+# Virtual envs
+venv/
+.env/
+.env.*           # alternate env files, e.g. .env.test
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.coverage
+.tox/
+.nox/
+.cache/
+.pytest_cache/
+htmlcov/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Profiling
+.prof
+
+# Docker
+docker-compose.override.yml
+.envrc
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Your custom entries:
+# Ignore compiled pages cache
 /pages/__pycache__/
 
-# Ignore everything inside pipelines/
+# Ignore everything inside pipelines/ but keep the folder and its .gitignore
 pipelines/*
-
-# But do not ignore the pipelines directory itself
 !pipelines/
-
-# Allow .gitignore inside pipelines/
 !pipelines/.gitignore
