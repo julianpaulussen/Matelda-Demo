@@ -193,7 +193,12 @@ for dom, folds in st.session_state.cell_folds.items():
                     st.markdown(f"**🔹 Column:** `{c}`  \n**🔹 Row Index:** `{r}`")
                     st.markdown("---")
                     st.markdown("### 🧠 Error Detection Strategies:")
-                    st.info("🧬 Placeholder for strategy pills or toggles...")
+                    if "strategies" in cell:
+                        for strategy, is_active in cell["strategies"].items():
+                            status = "✅" if is_active else "❌"
+                            st.markdown(f"{status} {strategy}")
+                    else:
+                        st.info("🧬 No strategies available for this cell")
                     st.markdown("---")
                     st.markdown("### 🔍 Full Table Preview with Highlight")
                     df_preview = load_clean_table(tbl)

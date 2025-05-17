@@ -83,7 +83,12 @@ def backend_qbf(selected_dataset: str, labeling_budget: int, domain_folds: Dict[
                         "table": "beers",
                         "row": 42,
                         "col": "name",
-                        "val": "Heineken"
+                        "val": "Heineken",
+                        "strategies": {
+                            "strategy01": true,
+                            "strategy02": false,
+                            ...
+                        }
                     },
                     ...
                 ],
@@ -126,11 +131,18 @@ def backend_qbf(selected_dataset: str, labeling_budget: int, domain_folds: Dict[
                             col_idx = header.index(col)
                             if col_idx < len(values):
                                 val = values[col_idx]
+                                # Generate random strategies
+                                num_strategies = random.randint(3, 5)
+                                strategies = {
+                                    f"strategy{i:02d}": random.choice([True, False])
+                                    for i in range(1, num_strategies + 1)
+                                }
                                 cells.append({
                                     "table": table,
                                     "row": row,
                                     "col": col,
-                                    "val": val
+                                    "val": val,
+                                    "strategies": strategies
                                 })
             except Exception as e:
                 print(f"Error processing table {table}: {e}")
@@ -148,7 +160,7 @@ def backend_qbf(selected_dataset: str, labeling_budget: int, domain_folds: Dict[
         if cell_fold_dict:  # Only add domain folds that have cell folds
             cell_folds[domain_fold] = cell_fold_dict
     
-    return cell_folds 
+    return cell_folds
 
 def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_folds: Dict[str, Dict[str, List[Dict[str, Any]]]], domain_folds: Dict[str, List[str]]) -> List[Dict[str, Any]]:
     """
@@ -172,7 +184,12 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
                 "col": "name",
                 "val": "Example",
                 "domain_fold": "Domain Fold 1",
-                "cell_fold": "Domain Fold 1 / Cell Fold 1"
+                "cell_fold": "Domain Fold 1 / Cell Fold 1",
+                "strategies": {
+                    "strategy01": true,
+                    "strategy02": false,
+                    ...
+                }
             },
             ...
         ]
@@ -182,18 +199,33 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
     root_dir = current_dir  # backend.py is in the root directory
     datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
     
+    def generate_strategies():
+        """Helper function to generate exactly 8 strategies"""
+        return {
+            f"strategy{i:02d}": random.choice([True, False])
+            for i in range(1, 9)  # Generate strategies 01-08
+        }
+    
     # Collect all available cells from cell folds
     all_cells = []
     for domain_fold, cell_fold_dict in cell_folds.items():
         for cell_fold_name, cells in cell_fold_dict.items():
             for cell in cells:
+                # If cell has strategies, ensure it has exactly 8
+                existing_strategies = cell.get("strategies", {})
+                strategies = {
+                    f"strategy{i:02d}": existing_strategies.get(f"strategy{i:02d}", random.choice([True, False]))
+                    for i in range(1, 9)
+                }
+                
                 cell_info = {
                     "table": cell["table"],
                     "row": cell["row"],
                     "col": cell["col"],
                     "val": cell["val"],
                     "domain_fold": domain_fold,
-                    "cell_fold": cell_fold_name
+                    "cell_fold": cell_fold_name,
+                    "strategies": strategies
                 }
                 all_cells.append(cell_info)
     
@@ -231,7 +263,8 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
                                 "col": col,
                                 "val": val,
                                 "domain_fold": domain_fold,
-                                "cell_fold": f"{domain_fold} / Random Sample"
+                                "cell_fold": f"{domain_fold} / Random Sample",
+                                "strategies": generate_strategies()
                             }
                             if cell_info not in all_cells:  # Avoid duplicates
                                 all_cells.append(cell_info)
@@ -252,10 +285,11 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
             "col": cell['col'],
             "val": cell['val'],
             "domain_fold": cell['domain_fold'],
-            "cell_fold": cell['cell_fold']
+            "cell_fold": cell['cell_fold'],
+            "strategies": cell['strategies']
         }
         for i, cell in enumerate(sampled_cells)
-    ] 
+    ]
 
 def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[str, Any]]) -> Dict[str, Any]:
     """

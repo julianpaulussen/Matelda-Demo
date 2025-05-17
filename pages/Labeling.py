@@ -113,9 +113,10 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
     card_id = card["id"]
 
     # Create eight pill elements with labels "Strategy01" to "Strategy08"
+    strategies = card.get("strategies", {})
     pills_html = "".join([
-        f'<span class="pill" id="pill-{i}-{card_id}" style="padding: 4px 8px; font-size:9px; border-radius: 16px; background: #ddd;">Strategy{(i+1):02d}</span>'
-        for i in range(8)
+        f'<span class="pill" id="pill-{strategy}-{card_id}" style="padding: 4px 8px; font-size:9px; border-radius: 16px; background: {"#FF8C00" if is_active else "#ddd"}; color: {"white" if is_active else "black"};">{strategy}</span>'
+        for strategy, is_active in sorted(strategies.items())  # Sort to ensure consistent order
     ])
     
     return f"""
@@ -145,7 +146,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             <div class="pills-header" style="padding: 4px 10px;">
               <h4 style="margin: 0; font-size: 16px;">Error Detection Strategies:</h4>
             </div>
-            <div class="pills-container" style="display: flex; justify-content: flex-start; gap: 8px; padding: 4px 10px;">
+            <div class="pills-container" style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; padding: 4px 10px;">
                 {pills_html}
             </div>
             <hr style="margin: 12px 10px; border: 0; border-top: 1px solid #ccc;" />
@@ -252,17 +253,6 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
         flipCardBack.addEventListener("click", function() {{
             flipCardInner.style.transform = "rotateY(0deg)";
         }});
-        
-        // Randomly highlight some pills in the pills container
-        (function() {{
-            var pills = document.querySelectorAll("#card-{card_id} .pill");
-            pills.forEach(function(pill) {{
-                if (Math.random() < 0.3) {{
-                    pill.style.backgroundColor = "#FF8C00";
-                    pill.style.color = "white";
-                }}
-            }});
-        }})();
       </script>
     </div>
     """
@@ -311,9 +301,16 @@ if st.session_state.run_quality_folding:
             cards = []
             for i in range(budget):
                 table, domain_fold = random.choice(available)
-                cards.append({"id": i, "name": f"{domain_fold} – {table}", "table": table})
+                # Generate strategies for fallback case
+                strategies = {f"strategy{j:02d}": random.choice([True, False]) for j in range(1, 9)}
+                cards.append({
+                    "id": i,
+                    "name": f"{domain_fold} – {table}",
+                    "table": table,
+                    "strategies": strategies
+                })
         else:
-            cards = [{"id": i, "name": f"Card {i+1}", "table": None} for i in range(5)]
+            cards = [{"id": i, "name": f"Card {i+1}", "table": None, "strategies": {f"strategy{j:02d}": random.choice([True, False]) for j in range(1, 9)}} for i in range(5)]
     
     cards_html = "".join([get_card_html(card) for card in cards])
     
