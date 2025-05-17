@@ -4,7 +4,7 @@ import time
 import json
 import pandas as pd
 import os
-from backend import backend_sample_labeling
+from backend import backend_sample_labeling, backend_error_propagation
 
 # Hide default Streamlit menu
 st.markdown("""
@@ -526,9 +526,34 @@ if st.session_state.run_quality_folding:
             return document.querySelector('.tinder--card');
           }}
 
+          // Add this JavaScript function to store labeling results
+          function storeLabelingResult(cardId, isError) {{
+            // Get the card data
+            var card = document.getElementById('card-' + cardId);
+            if (!card) return;
+            
+            // Store the result in a hidden input that Streamlit can read
+            var input = document.getElementById('labeled-results') || document.createElement('input');
+            input.id = 'labeled-results';
+            input.type = 'hidden';
+            
+            // Get existing results
+            var results = input.value ? JSON.parse(input.value) : {{}};
+            results[cardId] = isError;
+            input.value = JSON.stringify(results);
+            document.body.appendChild(input);
+            
+            // Trigger a custom event that Streamlit can listen for
+            const event = new CustomEvent('labeling_complete', {{ detail: {{ results: results }} }});
+            window.dispatchEvent(event);
+          }}
+          
+          // Modify the removeCard function to store results
           function removeCard(like) {{
             var card = getTopCard();
             if (!card) return;
+            var cardId = card.id.replace('card-', '');
+            storeLabelingResult(cardId, !like);  // like=true means not an error
             var toX = like ? 100 : -100;
             var angle = like ? 15 : -15;
             card.style.transform = 'translate(' + toX + 'vw, -10vh) rotate(' + angle + 'deg)';
@@ -607,18 +632,84 @@ if st.session_state.run_quality_folding:
     st.info(
         """
         **Labeling Instructions:**  
-        - **Swipe:** Swipe left on a card to mark it as "dislike" and swipe right to mark it as "like".  
+        - **Swipe:** Swipe left on a card to mark it as "error" and swipe right to mark it as "correct".  
         - **Buttons:**  
-          - Click the **x** button to register a "dislike".  
-          - Click the **✓** button to register a "like".  
+          - Click the **x** button to mark as "error".  
+          - Click the **✓** button to mark as "correct".  
           - Click the **↷** button to undo your last action.  
-        - Once you have labeled the sampled cell on the card, click the **Next** button below to proceed.
+        - Once you have labeled all cells, click the **Next** button below to proceed.
         """,
         icon="ℹ️"
     )
-    st.components.v1.html(html_template, height=800, scrolling=False)
+    
+    # Create a container for the HTML component and store its key
+    html_container = st.empty()
+    with html_container:
+        st.components.v1.html(html_template, height=800, scrolling=False)
+    
+    # Initialize or get the labeling results from session state
+    if "labeling_results" not in st.session_state:
+        st.session_state.labeling_results = {}
+    
+    # JavaScript callback to handle labeling results
+    components_container = st.empty()
+    with components_container:
+        st.components.v1.html(
+            """
+            <script>
+            window.addEventListener('labeling_complete', function(e) {
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: e.detail.results
+                }, '*');
+            });
+            </script>
+            """,
+            height=0
+        )
 
     st.markdown("---")
 
     if st.button("Next"):
-      st.switch_page("pages/ErrorDetection.py")
+        # Get the labeled cells with their results
+        labeled_cells = []
+        for card in cards:
+            is_error = st.session_state.labeling_results.get(str(card["id"]), False)
+            # Only include the fields that exist in the card
+            cell_info = {
+                "table": card.get("table"),
+                "is_error": is_error
+            }
+            # Add optional fields if they exist
+            for field in ["row", "col", "val", "domain_fold", "cell_fold"]:
+                if field in card:
+                    cell_info[field] = card[field]
+            labeled_cells.append(cell_info)
+        
+        # Call the error propagation function
+        selected_dataset = st.session_state.get("dataset_select")
+        results = backend_error_propagation(selected_dataset, labeled_cells)
+        
+        # Save results to configurations.json
+        if "pipeline_path" in st.session_state:
+            cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+            if os.path.exists(cfg_path):
+                with open(cfg_path, "r") as f:
+                    cfg = json.load(f)
+                
+                # Add timestamp to results
+                current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+                results["Time"] = current_time
+                
+                # Update or create the results list
+                if "results" not in cfg:
+                    cfg["results"] = []
+                cfg["results"].append(results)
+                
+                # Store propagated errors
+                cfg["propagated_errors"] = results["propagated_errors"]
+                
+                with open(cfg_path, "w") as f:
+                    json.dump(cfg, f, indent=2)
+        
+        st.switch_page("pages/ErrorDetection.py")

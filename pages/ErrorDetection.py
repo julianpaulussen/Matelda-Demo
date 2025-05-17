@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import time
 import os
+import json
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
@@ -24,71 +25,79 @@ with st.sidebar:
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
-# Get the dataset path from session state; default to a specific folder if not set
-datasets_path = st.session_state.get("dataset_path", os.path.join(os.path.dirname(__file__), "../datasets/Quintet"))
+# Load configuration and dataset path
+if "pipeline_path" not in st.session_state:
+    st.error("No pipeline selected!")
+    st.stop()
 
-# Dynamically list all subfolders in the dataset path (each subfolder represents a table)
-if os.path.exists(datasets_path):
-    tables = [table for table in os.listdir(datasets_path)
-              if os.path.isdir(os.path.join(datasets_path, table))]
-else:
-    st.error("Dataset path does not exist!")
-    tables = []
+config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+if not os.path.exists(config_path):
+    st.error("Configuration file not found!")
+    st.stop()
 
-if "run_error_detection" not in st.session_state:
-    st.session_state.run_error_detection = False  
+with open(config_path) as f:
+    config = json.load(f)
 
-if st.button("▶️ Run Error Detection"):
-    with st.spinner("🔄 Detecting errors... Please wait..."):
-        time.sleep(3)  # Simulate processing delay
-    st.session_state.run_error_detection = True
-    st.rerun()  # Refresh to show tables
+selected_dataset = config.get("selected_dataset")
+if not selected_dataset:
+    st.error("No dataset selected!")
+    st.stop()
 
-# Function to load the real table data and randomly mark some cells as errors
-def load_table_with_errors(table_name):
+datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
+
+# Function to load and display table with propagated errors
+def display_table_with_errors(table_name, error_cells):
     file_path = os.path.join(datasets_path, table_name, "clean.csv")
     try:
         df = pd.read_csv(file_path)
     except Exception as e:
-        df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
-        return df.style  # Return styled dataframe even if loading fails
+        st.error(f"Could not load {file_path}: {e}")
+        return
 
-    # Randomly determine the number of errors (at least 2, up to 6 or total cell count)
-    total_cells = df.size
-    if total_cells == 0:
-        num_errors = 0
-    else:
-        num_errors = np.random.randint(2, min(6, total_cells) + 1)
-    
-    # Randomly choose cell positions to mark as errors
-    error_positions = set()
-    for _ in range(num_errors):
-        r = np.random.randint(0, df.shape[0])
-        c = np.random.randint(0, df.shape[1])
-        error_positions.add((r, c))
-    
-    # Define a style function to highlight the error cells
+    # Define a style function to highlight the error cells with confidence
     def highlight_errors(data):
         df_styles = pd.DataFrame("", index=data.index, columns=data.columns)
-        for (r, c) in error_positions:
+        for error in error_cells:
             try:
-                df_styles.iloc[r, c] = "background-color: red; color: white"
+                confidence = error["confidence"]
+                # Convert confidence to color intensity (higher confidence = more intense red)
+                color_intensity = int(255 * (1 - confidence))
+                color = f"rgb(255, {color_intensity}, {color_intensity})"
+                df_styles.iloc[error["row"], data.columns.get_loc(error["col"])] = f"background-color: {color}; color: white"
             except Exception:
-                pass
+                continue
         return df_styles
-    
-    return df.style.apply(highlight_errors, axis=None)
 
-# If errors have been detected, display each table with errors highlighted
-if st.session_state.run_error_detection:
-    st.markdown("---")
+    # Apply styling and display
+    styled_df = df.style.apply(highlight_errors, axis=None)
+    return styled_df
+
+# Display loading message
+with st.spinner("🔍 Searching for possible errors in the datasets..."):
+    # Get propagated errors from config
+    propagated_errors = config.get("propagated_errors", {})
     
-    for table in tables:
-        with st.expander(f"📊 {table} (Errors Highlighted)"):
-            st.dataframe(load_table_with_errors(table))
+    # Display tables with propagated errors
+    st.markdown("### 🔍 Detected Errors")
+    st.markdown("The intensity of the red highlighting indicates the confidence level of the error detection (darker = higher confidence)")
     
-    st.markdown("---")
-    
-    # Navigation button to move to the next page
-    if st.button("Next"):
-        st.switch_page("pages/Results.py")
+    for table, errors in propagated_errors.items():
+        with st.expander(f"📊 {table} ({len(errors)} potential errors)"):
+            styled_df = display_table_with_errors(table, errors)
+            if styled_df is not None:
+                st.dataframe(styled_df)
+                
+                # Display error details
+                st.markdown("#### Error Details:")
+                for error in errors:
+                    confidence_percentage = int(error["confidence"] * 100)
+                    st.markdown(f"""
+                    - **Cell**: Row {error['row']}, Column `{error['col']}`
+                    - **Value**: `{error['val']}`
+                    - **Confidence**: {confidence_percentage}%
+                    ---
+                    """)
+
+# Navigation button to move to the next page
+if st.button("Next"):
+    st.switch_page("pages/Results.py")

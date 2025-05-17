@@ -39,11 +39,29 @@ def load_config(path):
             return {}
     return {}
 
-# Generate current metrics
-recall_score = round(random.uniform(0.7, 0.95), 2)
-f1_score = round(random.uniform(0.65, 0.92), 2)
-precision_score = round(random.uniform(0.75, 0.96), 2)
-current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# Get current metrics from the latest results in configurations.json
+if "pipeline_path" in st.session_state:
+    current_pipeline_path = st.session_state.pipeline_path
+    config_path = os.path.join(current_pipeline_path, "configurations.json")
+    config = load_config(config_path)
+    results = config.get("results", [])
+    
+    if results:
+        latest_result = results[-1]
+        metrics = latest_result.get("metrics", {})
+        recall_score = metrics.get("recall", 0)
+        f1_score = metrics.get("f1", 0)
+        precision_score = metrics.get("precision", 0)
+        current_time = latest_result.get("Time", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    else:
+        # Fallback to default values if no results exist
+        recall_score = 0
+        f1_score = 0
+        precision_score = 0
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+else:
+    st.error("No pipeline selected!")
+    st.stop()
 
 # Display current metrics in columns
 col1, col2, col3 = st.columns(3)
@@ -53,27 +71,6 @@ with col2:
     st.metric(label="F1 Score", value=f"{f1_score:.2f}")
 with col3:
     st.metric(label="Precision", value=f"{precision_score:.2f}")
-
-# Save Result button
-if st.button("Save Result"):
-    if "pipeline_path" in st.session_state:
-        pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
-        config = load_config(pipeline_config_path)
-        historical_results = config.get("results", [])
-        new_result = {
-            "Time": current_time,
-            "Recall": recall_score,
-            "F1": f1_score,
-            "Precision": precision_score
-        }
-        historical_results.append(new_result)
-        config["results"] = historical_results
-        with open(pipeline_config_path, "w") as f:
-            json.dump(config, f, indent=4)
-        st.success("Result saved!")
-        st.rerun()
-    else:
-        st.warning("No pipeline selected; result not saved.")
 
 # -----------------------------------------------------------------------------
 # Ensure that the current dataset is defined in session state.

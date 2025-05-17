@@ -256,3 +256,104 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
         }
         for i, cell in enumerate(sampled_cells)
     ] 
+
+def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Backend function that propagates errors based on labeled cells and calculates metrics.
+    This is a dummy implementation that will be replaced with actual logic in the future.
+    
+    Args:
+        selected_dataset (str): Name of the dataset to process
+        labeled_cells (List[Dict[str, Any]]): List of labeled cells with their properties
+            Each cell should have:
+            {
+                "table": str,
+                "row": int,
+                "col": str,
+                "val": Any,
+                "is_error": bool,  # True if labeled as error, False if labeled as correct
+                "domain_fold": str,
+                "cell_fold": str
+            }
+    
+    Returns:
+        Dict[str, Any]: Dictionary containing propagated errors and metrics:
+        {
+            "propagated_errors": {
+                "table1": [
+                    {
+                        "row": int,
+                        "col": str,
+                        "val": Any,
+                        "confidence": float  # confidence score for this being an error
+                    },
+                    ...
+                ],
+                "table2": [...],
+                ...
+            },
+            "metrics": {
+                "precision": float,
+                "recall": float,
+                "f1": float
+            }
+        }
+    """
+    # Get the actual tables from the dataset directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = current_dir  # backend.py is in the root directory
+    datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
+    
+    # Initialize results structure
+    propagated_errors = {}
+    
+    # For each table that had labeled cells, generate some random propagated errors
+    tables_with_labels = {cell["table"] for cell in labeled_cells}
+    for table in tables_with_labels:
+        try:
+            # Read the CSV file
+            table_path = os.path.join(datasets_path, table, "clean.csv")
+            with open(table_path, 'r') as f:
+                header = f.readline().strip().split(',')
+                lines = f.readlines()
+                
+                # Generate 3-8 random error cells for this table
+                num_errors = random.randint(3, 8)
+                table_errors = []
+                
+                for _ in range(num_errors):
+                    if lines:
+                        row = random.randint(0, len(lines) - 1)
+                        col = random.choice(header)
+                        values = lines[row].strip().split(',')
+                        col_idx = header.index(col)
+                        if col_idx < len(values):
+                            val = values[col_idx]
+                            error = {
+                                "row": row,
+                                "col": col,
+                                "val": val,
+                                "confidence": round(random.uniform(0.6, 0.95), 2)  # Random confidence score
+                            }
+                            table_errors.append(error)
+                
+                if table_errors:
+                    propagated_errors[table] = table_errors
+                    
+        except Exception as e:
+            print(f"Error processing table {table}: {e}")
+            continue
+    
+    # Generate random metrics (in real implementation, these would be calculated based on ground truth)
+    metrics = {
+        "precision": round(random.uniform(0.7, 0.9), 2),
+        "recall": round(random.uniform(0.7, 0.9), 2)
+    }
+    # Calculate F1 from precision and recall
+    metrics["f1"] = round(2 * (metrics["precision"] * metrics["recall"]) / 
+                         (metrics["precision"] + metrics["recall"]), 2)
+    
+    return {
+        "propagated_errors": propagated_errors,
+        "metrics": metrics
+    } 

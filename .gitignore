@@ -1,5 +1,6 @@
 # Virtual envs
 venv/
+.venv/
 .env/
 .env.*           # alternate env files, e.g. .env.test
 
