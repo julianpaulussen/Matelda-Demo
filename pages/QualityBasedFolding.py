@@ -102,7 +102,8 @@ defaults = {
     "run_quality_folding": False,
     "merge_mode": False,
     "split_mode": False,
-    "selected_cell_folds": []
+    "selected_folds_for_merge": [],  # List for merge mode
+    "selected_cells_for_split": {}   # Dict for split mode
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -150,38 +151,43 @@ for dom, folds in st.session_state.cell_folds.items():
         fold_to_domain[fname] = dom
 
 # Controls header
-header = st.columns([5, 1, 1])
-header[0].markdown("**Fold / Cell**")
-if header[1].button("Merge"):
+header_cols = st.columns([4, 1, 1])
+header_cols[0].markdown("**Fold / Cell**")
+if header_cols[1].button("Merge Folds", key="global_merge_button"):
+    st.info("Merge Folds: Combine multiple cell folds into one. Select the folds you wish to merge, and all cells from those folds will be grouped under a single fold.", icon="ℹ️")
     st.session_state.merge_mode = True
     st.session_state.split_mode = False
-    st.session_state.selected_cell_folds = []
-if header[2].button("Split"):
+    st.session_state.selected_folds_for_merge = []
+    st.session_state.selected_cells_for_split = {}
+if header_cols[2].button("Split Folds", key="global_split_button"):
+    st.info("Split Folds: Divide a cell fold into separate folds. Choose the cells at which you want the split to occur; the folds will be split immediately below the selected cells, separating the cells into multiple groups.", icon="ℹ️")
     st.session_state.split_mode = True
     st.session_state.merge_mode = False
-    st.session_state.selected_cell_folds = []
+    st.session_state.selected_folds_for_merge = []
+    st.session_state.selected_cells_for_split = {}
+
+st.markdown("---")
 
 # Display folds
 for dom, folds in st.session_state.cell_folds.items():
     for fname, cell_list in folds.items():
-        st.markdown("---")
-        cols = st.columns([5, 1, 1])
-        cols[0].markdown(f"📦 **{fname}**")
+        fold_cols = st.columns([4, 1, 1])
+        fold_cols[0].markdown(f"📦 **{fname}**")
         if st.session_state.merge_mode:
-            chk = cols[1].checkbox("✔", key=f"merge_{fname}", label_visibility="collapsed")
-            if chk and fname not in st.session_state.selected_cell_folds:
-                st.session_state.selected_cell_folds.append(fname)
-            if not chk and fname in st.session_state.selected_cell_folds:
-                st.session_state.selected_cell_folds.remove(fname)
+            merge_selected = fold_cols[1].checkbox("Merge", key=f"merge_{fname}", label_visibility="hidden")
+            if merge_selected and fname not in st.session_state.selected_folds_for_merge:
+                st.session_state.selected_folds_for_merge.append(fname)
+            elif not merge_selected and fname in st.session_state.selected_folds_for_merge:
+                st.session_state.selected_folds_for_merge.remove(fname)
         else:
-            cols[1].empty()
-        cols[2].empty()
+            fold_cols[1].empty()
+        fold_cols[2].empty()
 
         for cell in cell_list:
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
-            rowcols = st.columns([5, 1, 1])
-            with rowcols[0]:
+            cell_cols = st.columns([4, 1, 1])
+            with cell_cols[0]:
                 with st.popover(lbl):
                     st.markdown(f"### 📄 Table: `{tbl}`")
                     st.markdown(f"**🔹 Column:** `{c}`  \n**🔹 Row Index:** `{r}`")
@@ -207,49 +213,80 @@ for dom, folds in st.session_state.cell_folds.items():
                         new_dom = fold_to_domain[new_loc]
                         st.session_state.cell_folds[new_dom][new_loc].append(cell)
                         st.rerun()
-
-        # Merge confirm
-        if st.session_state.merge_mode and len(st.session_state.selected_cell_folds) > 1:
-            st.markdown("---")
-            if st.button("✅ Confirm Merge"):
-                tgt = st.session_state.selected_cell_folds[0]
-                for oth in st.session_state.selected_cell_folds[1:]:
-                    dom_tgt = fold_to_domain[tgt]
-                    dom_oth = fold_to_domain[oth]
-                    st.session_state.cell_folds[dom_tgt][tgt].extend(
-                        st.session_state.cell_folds[dom_oth][oth]
-                    )
-                    del st.session_state.cell_folds[dom_oth][oth]
-                st.session_state.merge_mode = False
-                st.session_state.selected_cell_folds = []
-                st.rerun()
-
-        # Split confirm
-        if st.session_state.split_mode and any(isinstance(x, dict) for x in st.session_state.selected_cell_folds):
-            st.markdown("---")
-            if st.button("✅ Confirm Split"):
-                for dom, frags in st.session_state.cell_folds.items():
-                    new_frags = {}
-                    for name, clist in list(frags.items()):
-                        segments, cur = [], []
-                        for item in clist:
-                            cur.append(item)
-                            if item in st.session_state.selected_cell_folds:
-                                segments.append(cur)
-                                cur = []
-                        if cur:
-                            segments.append(cur)
-                        del frags[name]
-                        for i, seg in enumerate(segments):
-                            new_frags[f"{name} - Split {i+1}"] = seg
-                        st.session_state.cell_folds[dom].update(new_frags)
-                st.session_state.split_mode = False
-                st.session_state.selected_cell_folds = []
-                st.rerun()
+            cell_cols[1].empty()
+            if st.session_state.split_mode:
+                split_selected = cell_cols[2].checkbox("Split here", key=f"split_{fname}_{tbl}_{r}_{c}", label_visibility="hidden")
+                if fname not in st.session_state.selected_cells_for_split:
+                    st.session_state.selected_cells_for_split[fname] = []
+                selected_cells = st.session_state.selected_cells_for_split.get(fname, [])
+                if split_selected and cell not in selected_cells:
+                    selected_cells.append(cell)
+                    st.session_state.selected_cells_for_split[fname] = selected_cells
+                elif not split_selected and cell in selected_cells:
+                    selected_cells.remove(cell)
+                    st.session_state.selected_cells_for_split[fname] = selected_cells
+            else:
+                cell_cols[2].empty()
 
 st.markdown("---")
+
+# Global Confirm Merge: if merge mode is active and more than one fold is selected
+if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge) > 1:
+    merge_confirm_cols = st.columns([4, 1, 1])
+    if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge"):
+        target_fold = st.session_state.selected_folds_for_merge[0]
+        target_domain = fold_to_domain[target_fold]
+        for fold in st.session_state.selected_folds_for_merge[1:]:
+            source_domain = fold_to_domain[fold]
+            # Extend target fold with cells from source fold
+            st.session_state.cell_folds[target_domain][target_fold].extend(
+                st.session_state.cell_folds[source_domain][fold]
+            )
+            # Remove the source fold
+            del st.session_state.cell_folds[source_domain][fold]
+        st.session_state.selected_folds_for_merge = []
+        st.session_state.merge_mode = False
+        st.rerun()
+
+# Global Confirm Split: if split mode is active and at least one cell is selected
+if st.session_state.split_mode:
+    any_split = any(st.session_state.selected_cells_for_split.get(fold, []) for fold in st.session_state.selected_cells_for_split)
+    if any_split:
+        split_confirm_cols = st.columns([4, 1, 1])
+        if split_confirm_cols[2].button("Confirm Split", key="confirm_split"):
+            for fold_name, selected_cells in st.session_state.selected_cells_for_split.items():
+                if selected_cells:
+                    domain = fold_to_domain[fold_name]
+                    cell_list = st.session_state.cell_folds[domain][fold_name]
+                    # Get indices of selected cells
+                    indices = sorted([cell_list.index(c) for c in selected_cells if c in cell_list])
+                    
+                    # Split the fold into segments
+                    new_folds = []
+                    prev_idx = 0
+                    for idx in indices:
+                        new_fold_name = f"{fold_name} - Split {len(new_folds) + 1}"
+                        new_folds.append((new_fold_name, cell_list[prev_idx:idx + 1]))
+                        prev_idx = idx + 1
+                    
+                    # Add remaining cells if any
+                    if prev_idx < len(cell_list):
+                        new_fold_name = f"{fold_name} - Split {len(new_folds) + 1}"
+                        new_folds.append((new_fold_name, cell_list[prev_idx:]))
+                    
+                    # Remove the original fold and add new folds
+                    del st.session_state.cell_folds[domain][fold_name]
+                    for new_name, cells in new_folds:
+                        st.session_state.cell_folds[domain][new_name] = cells
+            
+            st.session_state.split_mode = False
+            st.session_state.selected_cells_for_split = {}
+            st.rerun()
+
+st.markdown("---")
+
 # Save folds
-if st.button("💾 Save Cell Folds"):
+if st.button("💾 Save Cell Folds", key="save_cell_folds"):
     if "pipeline_path" in st.session_state:
         cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
         with open(cfg_path, "r") as f:
@@ -262,5 +299,5 @@ if st.button("💾 Save Cell Folds"):
         st.warning("⚠️ No pipeline path set.")
 
 # Next page button
-if st.button("Next"):
+if st.button("Next", key="next_page"):
     st.switch_page("pages/Labeling.py")
