@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import os
 import json
-import random
 import time
 import numpy as np
+from backend import backend_qbf
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
@@ -66,7 +66,8 @@ if "dataset_select" not in st.session_state:
 
 # Paths
 dataset = st.session_state.dataset_select
-datasets_dir = os.path.join(os.path.dirname(__file__), "../datasets", dataset)
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+datasets_dir = os.path.join(root_dir, "datasets", dataset)
 
 def load_clean_table(table_name):
     path = os.path.join(datasets_dir, table_name, "clean.csv")
@@ -110,22 +111,28 @@ for key, val in defaults.items():
 # Run quality-based folding
 if st.button("▶️ Run Quality Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
-        time.sleep(2)
-        st.session_state.cell_folds = {}
-        for domain_fold, tables in st.session_state.domain_folds.items():
-            num_folds = random.randint(1, 2)
-            fold_names = [f"{domain_fold} / Cell Fold {i+1}" for i in range(num_folds)]
-            cells = []
-            for tbl in tables:
-                df = load_clean_table(tbl)
-                for _ in range(random.randint(3, 5)):
-                    r = random.randint(0, df.shape[0]-1)
-                    c = random.choice(list(df.columns))
-                    val = df.at[r, c]
-                    cells.append({"table": tbl, "row": r, "col": c, "val": val})
-            random.shuffle(cells)
-            splits = [cells[i::num_folds] for i in range(num_folds)]
-            st.session_state.cell_folds[domain_fold] = {name: split for name, split in zip(fold_names, splits)}
+        # Get labeling budget from configuration
+        cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+        with open(cfg_path) as f:
+            cfg = json.load(f)
+        labeling_budget = cfg.get("labeling_budget", 10)
+        
+        # Call the backend function to get cell folds
+        cell_folds = backend_qbf(
+            selected_dataset=dataset,
+            labeling_budget=labeling_budget,
+            domain_folds=st.session_state.domain_folds
+        )
+        
+        # Store the cell folds in session state
+        st.session_state.cell_folds = cell_folds
+        
+        # Save to configuration file
+        cfg["cell_folds"] = cell_folds
+        with open(cfg_path, "w") as f:
+            json.dump(cfg, f, indent=2, default=_json_default)
+            
+        time.sleep(2)  # Keep a small delay for UX
     st.session_state.run_quality_folding = True
     st.rerun()
 
@@ -240,6 +247,7 @@ for dom, folds in st.session_state.cell_folds.items():
                 st.session_state.selected_cell_folds = []
                 st.rerun()
 
+st.markdown("---")
 # Save folds
 if st.button("💾 Save Cell Folds"):
     if "pipeline_path" in st.session_state:
