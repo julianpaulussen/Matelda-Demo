@@ -228,10 +228,9 @@ for dom, folds in st.session_state.cell_folds.items():
             else:
                 cell_cols[2].empty()
 
-st.markdown("---")
-
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
 if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge) > 1:
+    st.markdown("---")
     merge_confirm_cols = st.columns([4, 1, 1])
     if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge"):
         target_fold = st.session_state.selected_folds_for_merge[0]
@@ -252,6 +251,7 @@ if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge
 if st.session_state.split_mode:
     any_split = any(st.session_state.selected_cells_for_split.get(fold, []) for fold in st.session_state.selected_cells_for_split)
     if any_split:
+        st.markdown("---")
         split_confirm_cols = st.columns([4, 1, 1])
         if split_confirm_cols[2].button("Confirm Split", key="confirm_split"):
             for fold_name, selected_cells in st.session_state.selected_cells_for_split.items():
