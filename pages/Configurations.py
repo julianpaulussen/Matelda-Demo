@@ -116,10 +116,13 @@ else:
     if not dataset_options:
         st.warning("No dataset folders found in the datasets folder.")
     else:
+        # Set default index to "Demo" if it exists in options
+        default_index = dataset_options.index("Demo") if "Demo" in dataset_options else 0
         # The selectbox widget writes its value into st.session_state['dataset_select']
         selected_dataset_folder = st.selectbox(
             "Select the dataset you want to use:",
             options=dataset_options,
+            index=default_index,
             key="dataset_select",
             label_visibility="visible"
         )
