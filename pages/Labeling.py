@@ -4,6 +4,7 @@ import time
 import json
 import pandas as pd
 import os
+from backend import backend_sample_labeling
 
 # Hide default Streamlit menu
 st.markdown("""
@@ -278,21 +279,41 @@ st.title("Labeling")
 if not st.session_state.run_quality_folding:
     if st.button("Run Labeling"):
         with st.spinner("🔄 Processing... Please wait..."):
-            time.sleep(3)
+            # Get necessary data from session state
+            selected_dataset = st.session_state.get("dataset_select")
+            labeling_budget = st.session_state.get("labeling_budget", 10)
+            cell_folds = st.session_state.get("cell_folds", {})
+            domain_folds = st.session_state.get("domain_folds", {})
+            
+            # Call backend function to get sampled cells
+            sampled_cells = backend_sample_labeling(
+                selected_dataset=selected_dataset,
+                labeling_budget=labeling_budget,
+                cell_folds=cell_folds,
+                domain_folds=domain_folds
+            )
+            
+            # Store sampled cells in session state
+            st.session_state.sampled_cells = sampled_cells
+            time.sleep(2)  # Keep a small delay for UX
         st.session_state.run_quality_folding = True
         st.rerun()
 
-# Generate cards based on labeling budget and table_locations (with replacement if needed)
+# Generate cards based on sampled cells
 if st.session_state.run_quality_folding:
-    budget = st.session_state.get("labeling_budget", 10)
-    if "table_locations" in st.session_state:
-        available = list(st.session_state.table_locations.items())
-        cards = []
-        for i in range(budget):
-            table, domain_fold = random.choice(available)
-            cards.append({"id": i, "name": f"{domain_fold} – {table}", "table": table})
+    if "sampled_cells" in st.session_state:
+        cards = st.session_state.sampled_cells
     else:
-        cards = [{"id": i, "name": f"Card {i+1}", "table": None} for i in range(5)]
+        # Fallback to old behavior if no sampled cells (shouldn't happen)
+        budget = st.session_state.get("labeling_budget", 10)
+        if "table_locations" in st.session_state:
+            available = list(st.session_state.table_locations.items())
+            cards = []
+            for i in range(budget):
+                table, domain_fold = random.choice(available)
+                cards.append({"id": i, "name": f"{domain_fold} – {table}", "table": table})
+        else:
+            cards = [{"id": i, "name": f"Card {i+1}", "table": None} for i in range(5)]
     
     cards_html = "".join([get_card_html(card) for card in cards])
     

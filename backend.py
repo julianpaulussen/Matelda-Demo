@@ -149,3 +149,110 @@ def backend_qbf(selected_dataset: str, labeling_budget: int, domain_folds: Dict[
             cell_folds[domain_fold] = cell_fold_dict
     
     return cell_folds 
+
+def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_folds: Dict[str, Dict[str, List[Dict[str, Any]]]], domain_folds: Dict[str, List[str]]) -> List[Dict[str, Any]]:
+    """
+    Backend function that samples cells for labeling.
+    This is a dummy implementation that will be replaced with actual logic in the future.
+    
+    Args:
+        selected_dataset (str): Name of the dataset to process
+        labeling_budget (int): Number of cells to sample for labeling
+        cell_folds (Dict[str, Dict[str, List[Dict[str, Any]]]]): Cell folds from quality-based folding
+        domain_folds (Dict[str, List[str]]): Domain folds mapping
+        
+    Returns:
+        List[Dict[str, Any]]: List of sampled cells in the format:
+        [
+            {
+                "id": 1,
+                "name": "Domain Fold 1 / Cell Fold 1 - Table1",
+                "table": "Table1",
+                "row": 42,
+                "col": "name",
+                "val": "Example",
+                "domain_fold": "Domain Fold 1",
+                "cell_fold": "Domain Fold 1 / Cell Fold 1"
+            },
+            ...
+        ]
+    """
+    # Get the actual tables from the dataset directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = current_dir  # backend.py is in the root directory
+    datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
+    
+    # Collect all available cells from cell folds
+    all_cells = []
+    for domain_fold, cell_fold_dict in cell_folds.items():
+        for cell_fold_name, cells in cell_fold_dict.items():
+            for cell in cells:
+                cell_info = {
+                    "table": cell["table"],
+                    "row": cell["row"],
+                    "col": cell["col"],
+                    "val": cell["val"],
+                    "domain_fold": domain_fold,
+                    "cell_fold": cell_fold_name
+                }
+                all_cells.append(cell_info)
+    
+    # If we don't have enough cells in cell_folds, generate additional random cells
+    if len(all_cells) < labeling_budget:
+        # Get all tables from domain folds
+        all_tables = []
+        for tables in domain_folds.values():
+            all_tables.extend(tables)
+        
+        # Generate additional random cells
+        while len(all_cells) < labeling_budget:
+            table = random.choice(all_tables)
+            try:
+                # Read the CSV file
+                table_path = os.path.join(datasets_path, table, "clean.csv")
+                with open(table_path, 'r') as f:
+                    header = f.readline().strip().split(',')
+                    lines = f.readlines()
+                    if lines:
+                        row = random.randint(0, len(lines) - 1)
+                        col = random.choice(header)
+                        values = lines[row].strip().split(',')
+                        col_idx = header.index(col)
+                        if col_idx < len(values):
+                            val = values[col_idx]
+                            # Find the domain fold for this table
+                            domain_fold = next(
+                                (fold for fold, tables in domain_folds.items() if table in tables),
+                                "Unknown Domain"
+                            )
+                            cell_info = {
+                                "table": table,
+                                "row": row,
+                                "col": col,
+                                "val": val,
+                                "domain_fold": domain_fold,
+                                "cell_fold": f"{domain_fold} / Random Sample"
+                            }
+                            if cell_info not in all_cells:  # Avoid duplicates
+                                all_cells.append(cell_info)
+            except Exception as e:
+                print(f"Error processing table {table}: {e}")
+                continue
+    
+    # Randomly sample labeling_budget cells
+    sampled_cells = random.sample(all_cells, min(labeling_budget, len(all_cells)))
+    
+    # Format the output
+    return [
+        {
+            "id": i,
+            "name": f"{cell['domain_fold']} – {cell['table']}",
+            "table": cell['table'],
+            "row": cell['row'],
+            "col": cell['col'],
+            "val": cell['val'],
+            "domain_fold": cell['domain_fold'],
+            "cell_fold": cell['cell_fold']
+        }
+        for i, cell in enumerate(sampled_cells)
+    ] 
