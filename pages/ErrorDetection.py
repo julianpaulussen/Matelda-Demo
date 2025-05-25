@@ -4,6 +4,7 @@ import numpy as np
 import time
 import os
 import json
+from backend import backend_pull_errors
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
@@ -74,8 +75,9 @@ def display_table_with_errors(table_name, error_cells):
 
 # Display loading message
 with st.spinner("🔍 Searching for possible errors in the datasets..."):
-    # Get propagated errors from config
-    propagated_errors = config.get("propagated_errors", {})
+    # Get errors using the new backend function
+    results = backend_pull_errors(selected_dataset)
+    propagated_errors = results["propagated_errors"]
     
     # Display tables with propagated errors
     st.markdown("### 🔍 Detected Errors")
@@ -91,10 +93,12 @@ with st.spinner("🔍 Searching for possible errors in the datasets..."):
                 st.markdown("#### Error Details:")
                 for error in errors:
                     confidence_percentage = int(error["confidence"] * 100)
+                    source = error.get("source", "Unknown")
                     st.markdown(f"""
                     - **Cell**: Row {error['row']}, Column `{error['col']}`
                     - **Value**: `{error['val']}`
                     - **Confidence**: {confidence_percentage}%
+                    - **Source**: {source}
                     ---
                     """)
 

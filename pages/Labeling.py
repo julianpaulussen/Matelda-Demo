@@ -667,25 +667,86 @@ if st.session_state.run_quality_folding:
 
     st.markdown("---")
 
-    if st.button("Next"):
-        # Get the labeled cells with their results
-        labeled_cells = []
-        for card in cards:
-            is_error = st.session_state.labeling_results.get(str(card["id"]), False)
-            # Only include the fields that exist in the card
-            cell_info = {
-                "table": card.get("table"),
-                "is_error": is_error
-            }
-            # Add optional fields if they exist
-            for field in ["row", "col", "val", "domain_fold", "cell_fold"]:
-                if field in card:
-                    cell_info[field] = card[field]
-            labeled_cells.append(cell_info)
+    # Initialize state for showing propagation results
+    if "show_propagation_results" not in st.session_state:
+        st.session_state.show_propagation_results = False
+
+    # First button to process labels and show propagation
+    if not st.session_state.show_propagation_results:
+        if st.button("Process Labels"):
+            # Get the labeled cells with their results
+            labeled_cells = []
+            for card in cards:
+                is_error = st.session_state.labeling_results.get(str(card["id"]), False)
+                # Only include the fields that exist in the card
+                cell_info = {
+                    "table": card.get("table"),
+                    "is_error": is_error,
+                    "row": card.get("row", 0),  # Default to 0 if not present
+                    "col": card.get("col", ""),  # Default to empty string if not present
+                    "val": card.get("val", ""),  # Default to empty string if not present
+                    "domain_fold": card.get("domain_fold", ""),
+                    "cell_fold": card.get("cell_fold", "")
+                }
+                labeled_cells.append(cell_info)
+            
+            # Call the error propagation function
+            selected_dataset = st.session_state.get("dataset_select")
+            propagation_results = backend_label_propagation(selected_dataset, labeled_cells)
+            
+            # Store results in session state
+            st.session_state.propagation_results = propagation_results
+            st.session_state.show_propagation_results = True
+            st.rerun()
+
+    # Show propagation results and continue button if available
+    if st.session_state.show_propagation_results and hasattr(st.session_state, 'propagation_results'):
+        st.markdown("### 🔄 Label Propagation Results")
+        st.markdown("Below are the cells you labeled and how their labels were propagated to other cells:")
         
-        # Call the error propagation function
-        selected_dataset = st.session_state.get("dataset_select")
-        results = backend_label_propagation(selected_dataset, labeled_cells)
+        propagation_results = st.session_state.propagation_results
+        for labeled_cell in propagation_results["labeled_cells"]:
+            # Create a descriptive title for the expander that includes the cell value and label
+            cell_value = labeled_cell.get('val', 'Unknown Value')
+            is_error = labeled_cell.get('is_error', False)
+            label_icon = '❌' if is_error else '✅'
+            cell_desc = f"{label_icon} Cell: `{cell_value}`"
+            
+            with st.expander(cell_desc):
+                # Show the original labeled cell details
+                cell_info = ["**Original Cell Details**"]
+                if labeled_cell.get('table'):
+                    cell_info.append(f"- **Table**: `{labeled_cell['table']}`")
+                if labeled_cell.get('row') is not None:
+                    cell_info.append(f"- **Row**: {labeled_cell['row']}")
+                if labeled_cell.get('col'):
+                    cell_info.append(f"- **Column**: `{labeled_cell['col']}`")
+                if labeled_cell.get('domain_fold'):
+                    cell_info.append(f"- **Domain Fold**: {labeled_cell['domain_fold']}")
+                if labeled_cell.get('cell_fold'):
+                    cell_info.append(f"- **Cell Fold**: {labeled_cell['cell_fold']}")
+                
+                st.markdown("\n".join(cell_info))
+                
+                # Show propagated cells
+                if labeled_cell.get('propagated_cells'):
+                    st.markdown("**Propagated to:**")
+                    for prop in labeled_cell['propagated_cells']:
+                        confidence_pct = int(prop.get('confidence', 0) * 100)
+                        prop_info = []
+                        prop_info.append(f"- 🔹 Table: `{prop.get('table', 'Unknown')}`")
+                        if prop.get('row') is not None:
+                            prop_info.append(f"  - Row: {prop['row']}")
+                        if prop.get('col'):
+                            prop_info.append(f"  - Column: `{prop['col']}`")
+                        if prop.get('val') is not None:
+                            prop_info.append(f"  - Value: `{prop['val']}`")
+                        prop_info.append(f"  - Confidence: {confidence_pct}%")
+                        if prop.get('reason'):
+                            prop_info.append(f"  - Reason: {prop['reason']}")
+                        st.markdown("\n".join(prop_info))
+                else:
+                    st.info("No cells were propagated from this label")
         
         # Save results to configurations.json
         if "pipeline_path" in st.session_state:
@@ -696,17 +757,78 @@ if st.session_state.run_quality_folding:
                 
                 # Add timestamp to results
                 current_time = time.strftime("%Y-%m-%d %H:%M:%S")
-                results["Time"] = current_time
                 
-                # Update or create the results list
-                if "results" not in cfg:
-                    cfg["results"] = []
-                cfg["results"].append(results)
+                # Collect all propagated errors into the format expected by error detection
+                propagated_errors = {}
+                for labeled_cell in propagation_results["labeled_cells"]:
+                    table = labeled_cell.get("table")
+                    if not table:
+                        continue
+                        
+                    if labeled_cell["is_error"]:
+                        # Add the original labeled error
+                        if table not in propagated_errors:
+                            propagated_errors[table] = []
+                        error_info = {
+                            "confidence": 1.0,
+                            "source": "direct_label"
+                        }
+                        # Only add fields that exist
+                        if labeled_cell.get("row") is not None:
+                            error_info["row"] = labeled_cell["row"]
+                        if labeled_cell.get("col"):
+                            error_info["col"] = labeled_cell["col"]
+                        if labeled_cell.get("val") is not None:
+                            error_info["val"] = labeled_cell["val"]
+                        propagated_errors[table].append(error_info)
+                    
+                    # Add propagated errors
+                    for prop in labeled_cell.get("propagated_cells", []):
+                        if table not in propagated_errors:
+                            propagated_errors[table] = []
+                        error_info = {
+                            "confidence": prop.get("confidence", 0.5),
+                            "source": prop.get("reason", "Unknown")
+                        }
+                        # Only add fields that exist
+                        if prop.get("row") is not None:
+                            error_info["row"] = prop["row"]
+                        if prop.get("col"):
+                            error_info["col"] = prop["col"]
+                        if prop.get("val") is not None:
+                            error_info["val"] = prop["val"]
+                        propagated_errors[table].append(error_info)
                 
                 # Store propagated errors
-                cfg["propagated_errors"] = results["propagated_errors"]
+                cfg["propagated_errors"] = propagated_errors
+                
+                # Generate random metrics for this run
+                metrics = {
+                    "precision": round(random.uniform(0.7, 0.9), 2),
+                    "recall": round(random.uniform(0.7, 0.9), 2),
+                    "fold_label_influence": round(random.uniform(0.1, 0.4), 2)
+                }
+                metrics["f1"] = round(2 * (metrics["precision"] * metrics["recall"]) / 
+                                    (metrics["precision"] + metrics["recall"]), 2)
+                
+                # Store the complete results
+                results_entry = {
+                    "Time": current_time,
+                    "propagated_errors": propagated_errors,
+                    "metrics": metrics
+                }
+                
+                if "results" not in cfg:
+                    cfg["results"] = []
+                cfg["results"].append(results_entry)
                 
                 with open(cfg_path, "w") as f:
                     json.dump(cfg, f, indent=2)
         
-        st.switch_page("pages/ErrorDetection.py")
+        # Single button to move to error detection
+        if st.button("Continue to Error Detection"):
+            # Reset the state before moving to the next page
+            st.session_state.show_propagation_results = False
+            if hasattr(st.session_state, 'propagation_results'):
+                del st.session_state.propagation_results
+            st.switch_page("pages/ErrorDetection.py")

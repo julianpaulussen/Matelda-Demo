@@ -2,6 +2,7 @@ import random
 import os
 import json
 from typing import Dict, List, Union, Any
+import streamlit as st
 
 def backend_dbf(dataset: str, labeling_budget: int) -> dict:
     """
@@ -313,7 +314,7 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
 
 def backend_label_propagation(selected_dataset: str, labeled_cells: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Backend function that propagates errors based on labeled cells and calculates metrics.
+    Backend function that propagates errors based on labeled cells.
     This is a dummy implementation that will be replaced with actual logic in the future.
     
     Args:
@@ -332,7 +333,99 @@ def backend_label_propagation(selected_dataset: str, labeled_cells: List[Dict[st
             }
     
     Returns:
-        Dict[str, Any]: Dictionary containing propagated errors and metrics:
+        Dict[str, Any]: Dictionary containing propagated errors and their sources:
+        {
+            "labeled_cells": [
+                {
+                    "table": str,
+                    "row": int,
+                    "col": str,
+                    "val": Any,
+                    "is_error": bool,
+                    "propagated_cells": [
+                        {
+                            "table": str,
+                            "row": int,
+                            "col": str,
+                            "val": Any,
+                            "confidence": float,  # confidence score for this being an error
+                            "reason": str  # explanation of why this was propagated
+                        },
+                        ...
+                    ]
+                },
+                ...
+            ]
+        }
+    """
+    # Get the actual tables from the dataset directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = current_dir  # backend.py is in the root directory
+    datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
+    
+    # Initialize results structure
+    labeled_cells_with_propagation = []
+    
+    # For each labeled cell, generate some random propagated cells
+    for labeled_cell in labeled_cells:
+        table = labeled_cell["table"]
+        try:
+            # Read the CSV file
+            table_path = os.path.join(datasets_path, table, "clean.csv")
+            with open(table_path, 'r') as f:
+                header = f.readline().strip().split(',')
+                lines = f.readlines()
+                
+                # Generate 2-4 random propagated cells for this labeled cell
+                num_propagated = random.randint(2, 4)
+                propagated_cells = []
+                
+                for _ in range(num_propagated):
+                    if lines:
+                        row = random.randint(0, len(lines) - 1)
+                        col = random.choice(header)
+                        values = lines[row].strip().split(',')
+                        col_idx = header.index(col)
+                        if col_idx < len(values):
+                            val = values[col_idx]
+                            propagated = {
+                                "table": table,
+                                "row": row,
+                                "col": col,
+                                "val": val,
+                                "confidence": round(random.uniform(0.6, 0.95), 2),  # Random confidence score
+                                "reason": random.choice([
+                                    "Similar value pattern",
+                                    "Same column characteristics",
+                                    "Domain similarity",
+                                    "Statistical correlation"
+                                ])
+                            }
+                            propagated_cells.append(propagated)
+                
+                labeled_cells_with_propagation.append({
+                    **labeled_cell,  # Include all original labeled cell info
+                    "propagated_cells": propagated_cells
+                })
+                    
+        except Exception as e:
+            print(f"Error processing table {table}: {e}")
+            continue
+    
+    return {
+        "labeled_cells": labeled_cells_with_propagation
+    }
+
+def backend_pull_errors(selected_dataset: str) -> Dict[str, Any]:
+    """
+    Backend function that retrieves all detected errors from the configurations.json file.
+    This is a dummy implementation that will be replaced with actual logic in the future.
+    
+    Args:
+        selected_dataset (str): Name of the dataset to process
+        
+    Returns:
+        Dict[str, Any]: Dictionary containing all detected errors and metrics:
         {
             "propagated_errors": {
                 "table1": [
@@ -359,60 +452,54 @@ def backend_label_propagation(selected_dataset: str, labeled_cells: List[Dict[st
     # Get the actual tables from the dataset directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = current_dir  # backend.py is in the root directory
-    datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
     
-    # Initialize results structure
-    propagated_errors = {}
+    # Get the pipeline path from session state
+    if "pipeline_path" not in st.session_state:
+        print("No pipeline path in session state")
+        return {
+            "propagated_errors": {},
+            "metrics": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "fold_label_influence": 0.0
+            }
+        }
     
-    # For each table that had labeled cells, generate some random propagated errors
-    tables_with_labels = {cell["table"] for cell in labeled_cells}
-    for table in tables_with_labels:
-        try:
-            # Read the CSV file
-            table_path = os.path.join(datasets_path, table, "clean.csv")
-            with open(table_path, 'r') as f:
-                header = f.readline().strip().split(',')
-                lines = f.readlines()
-                
-                # Generate 3-8 random error cells for this table
-                num_errors = random.randint(3, 8)
-                table_errors = []
-                
-                for _ in range(num_errors):
-                    if lines:
-                        row = random.randint(0, len(lines) - 1)
-                        col = random.choice(header)
-                        values = lines[row].strip().split(',')
-                        col_idx = header.index(col)
-                        if col_idx < len(values):
-                            val = values[col_idx]
-                            error = {
-                                "row": row,
-                                "col": col,
-                                "val": val,
-                                "confidence": round(random.uniform(0.6, 0.95), 2),  # Random confidence score
-                                "source": random.choice(["direct_label", "cell_fold_propagation", "pattern_matching"])
-                            }
-                            table_errors.append(error)
-                
-                if table_errors:
-                    propagated_errors[table] = table_errors
-                    
-        except Exception as e:
-            print(f"Error processing table {table}: {e}")
-            continue
+    config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     
-    # Generate random metrics (in real implementation, these would be calculated based on ground truth)
-    metrics = {
-        "precision": round(random.uniform(0.7, 0.9), 2),
-        "recall": round(random.uniform(0.7, 0.9), 2),
-        "fold_label_influence": round(random.uniform(0.1, 0.4), 2)  # Measure of how cell fold labels influenced results
-    }
-    # Calculate F1 from precision and recall
-    metrics["f1"] = round(2 * (metrics["precision"] * metrics["recall"]) / 
-                         (metrics["precision"] + metrics["recall"]), 2)
-    
-    return {
-        "propagated_errors": propagated_errors,
-        "metrics": metrics
-    } 
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+            
+        # Get the propagated errors from the config
+        propagated_errors = config.get("propagated_errors", {})
+        
+        # Get the metrics from the latest result
+        results = config.get("results", [])
+        if results:
+            metrics = results[-1].get("metrics", {})
+        else:
+            metrics = {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "fold_label_influence": 0.0
+            }
+            
+        return {
+            "propagated_errors": propagated_errors,
+            "metrics": metrics
+        }
+        
+    except Exception as e:
+        print(f"Error loading configuration: {e}")
+        return {
+            "propagated_errors": {},
+            "metrics": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "fold_label_influence": 0.0
+            }
+        } 
