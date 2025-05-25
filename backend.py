@@ -311,7 +311,7 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
         for i, cell in enumerate(sampled_cells)
     ]
 
-def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[str, Any]]) -> Dict[str, Any]:
+def backend_label_propagation(selected_dataset: str, labeled_cells: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Backend function that propagates errors based on labeled cells and calculates metrics.
     This is a dummy implementation that will be replaced with actual logic in the future.

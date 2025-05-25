@@ -4,7 +4,7 @@ import time
 import json
 import pandas as pd
 import os
-from backend import backend_sample_labeling, backend_error_propagation
+from backend import backend_sample_labeling, backend_label_propagation
 
 # Hide default Streamlit menu
 st.markdown("""
@@ -685,7 +685,7 @@ if st.session_state.run_quality_folding:
         
         # Call the error propagation function
         selected_dataset = st.session_state.get("dataset_select")
-        results = backend_error_propagation(selected_dataset, labeled_cells)
+        results = backend_label_propagation(selected_dataset, labeled_cells)
         
         # Save results to configurations.json
         if "pipeline_path" in st.session_state:
