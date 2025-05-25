@@ -1,5 +1,6 @@
 import random
 import os
+import json
 from typing import Dict, List, Union, Any
 
 def backend_dbf(dataset: str, labeling_budget: int) -> dict:
@@ -185,6 +186,7 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
                 "val": "Example",
                 "domain_fold": "Domain Fold 1",
                 "cell_fold": "Domain Fold 1 / Cell Fold 1",
+                "cell_fold_label": "correct"|"false"|"neutral",  # Label from bulk annotation
                 "strategies": {
                     "strategy01": true,
                     "strategy02": false,
@@ -206,10 +208,24 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
             for i in range(1, 9)  # Generate strategies 01-08
         }
     
+    # Load cell fold labels from configurations.json
+    config_path = os.path.join(root_dir, "pipelines", os.path.basename(os.path.dirname(datasets_path)), "configurations.json")
+    cell_fold_labels = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+                cell_fold_labels = config.get("cell_fold_labels", {})
+        except Exception as e:
+            print(f"Error loading cell fold labels: {e}")
+    
     # Collect all available cells from cell folds
     all_cells = []
     for domain_fold, cell_fold_dict in cell_folds.items():
         for cell_fold_name, cells in cell_fold_dict.items():
+            # Get the label for this cell fold
+            cell_fold_label = cell_fold_labels.get(cell_fold_name, "neutral")
+            
             for cell in cells:
                 # If cell has strategies, ensure it has exactly 8
                 existing_strategies = cell.get("strategies", {})
@@ -225,6 +241,7 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
                     "val": cell["val"],
                     "domain_fold": domain_fold,
                     "cell_fold": cell_fold_name,
+                    "cell_fold_label": cell_fold_label,  # Include the cell fold label
                     "strategies": strategies
                 }
                 all_cells.append(cell_info)
@@ -257,13 +274,15 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
                                 (fold for fold, tables in domain_folds.items() if table in tables),
                                 "Unknown Domain"
                             )
+                            cell_fold_name = f"{domain_fold} / Random Sample"
                             cell_info = {
                                 "table": table,
                                 "row": row,
                                 "col": col,
                                 "val": val,
                                 "domain_fold": domain_fold,
-                                "cell_fold": f"{domain_fold} / Random Sample",
+                                "cell_fold": cell_fold_name,
+                                "cell_fold_label": cell_fold_labels.get(cell_fold_name, "neutral"),
                                 "strategies": generate_strategies()
                             }
                             if cell_info not in all_cells:  # Avoid duplicates
@@ -286,6 +305,7 @@ def backend_sample_labeling(selected_dataset: str, labeling_budget: int, cell_fo
             "val": cell['val'],
             "domain_fold": cell['domain_fold'],
             "cell_fold": cell['cell_fold'],
+            "cell_fold_label": cell['cell_fold_label'],
             "strategies": cell['strategies']
         }
         for i, cell in enumerate(sampled_cells)
@@ -307,7 +327,8 @@ def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[st
                 "val": Any,
                 "is_error": bool,  # True if labeled as error, False if labeled as correct
                 "domain_fold": str,
-                "cell_fold": str
+                "cell_fold": str,
+                "cell_fold_label": str  # "correct", "false", or "neutral"
             }
     
     Returns:
@@ -319,7 +340,8 @@ def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[st
                         "row": int,
                         "col": str,
                         "val": Any,
-                        "confidence": float  # confidence score for this being an error
+                        "confidence": float,  # confidence score for this being an error
+                        "source": str  # e.g., "direct_label", "cell_fold_propagation", etc.
                     },
                     ...
                 ],
@@ -329,7 +351,8 @@ def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[st
             "metrics": {
                 "precision": float,
                 "recall": float,
-                "f1": float
+                "f1": float,
+                "fold_label_influence": float  # measure of how cell fold labels influenced the results
             }
         }
     """
@@ -367,7 +390,8 @@ def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[st
                                 "row": row,
                                 "col": col,
                                 "val": val,
-                                "confidence": round(random.uniform(0.6, 0.95), 2)  # Random confidence score
+                                "confidence": round(random.uniform(0.6, 0.95), 2),  # Random confidence score
+                                "source": random.choice(["direct_label", "cell_fold_propagation", "pattern_matching"])
                             }
                             table_errors.append(error)
                 
@@ -381,7 +405,8 @@ def backend_error_propagation(selected_dataset: str, labeled_cells: List[Dict[st
     # Generate random metrics (in real implementation, these would be calculated based on ground truth)
     metrics = {
         "precision": round(random.uniform(0.7, 0.9), 2),
-        "recall": round(random.uniform(0.7, 0.9), 2)
+        "recall": round(random.uniform(0.7, 0.9), 2),
+        "fold_label_influence": round(random.uniform(0.1, 0.4), 2)  # Measure of how cell fold labels influenced results
     }
     # Calculate F1 from precision and recall
     metrics["f1"] = round(2 * (metrics["precision"] * metrics["recall"]) / 

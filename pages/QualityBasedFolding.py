@@ -102,6 +102,7 @@ defaults = {
     "run_quality_folding": False,
     "merge_mode": False,
     "split_mode": False,
+    "bulk_annotate_mode": False,  # New mode for bulk annotation
     "selected_folds_for_merge": [],  # List for merge mode
     "selected_cells_for_split": {}   # Dict for split mode
 }
@@ -151,18 +152,27 @@ for dom, folds in st.session_state.cell_folds.items():
         fold_to_domain[fname] = dom
 
 # Controls header
-header_cols = st.columns([4, 1, 1])
+header_cols = st.columns([4, 1, 1, 1])  # Added one more column
 header_cols[0].markdown("**Fold / Cell**")
 if header_cols[1].button("Merge Folds", key="global_merge_button"):
     st.info("Merge Folds: Combine multiple cell folds into one. Select the folds you wish to merge, and all cells from those folds will be grouped under a single fold.", icon="ℹ️")
     st.session_state.merge_mode = True
     st.session_state.split_mode = False
+    st.session_state.bulk_annotate_mode = False
     st.session_state.selected_folds_for_merge = []
     st.session_state.selected_cells_for_split = {}
 if header_cols[2].button("Split Folds", key="global_split_button"):
     st.info("Split Folds: Divide a cell fold into separate folds. Choose the cells at which you want the split to occur; the folds will be split immediately below the selected cells, separating the cells into multiple groups.", icon="ℹ️")
     st.session_state.split_mode = True
     st.session_state.merge_mode = False
+    st.session_state.bulk_annotate_mode = False
+    st.session_state.selected_folds_for_merge = []
+    st.session_state.selected_cells_for_split = {}
+if header_cols[3].button("Bulk Annotate", key="global_bulk_annotate_button"):
+    st.info("Bulk Annotate: Label multiple cell folds at once as correct or incorrect. These labels will be used for error detection.", icon="ℹ️")
+    st.session_state.bulk_annotate_mode = True
+    st.session_state.merge_mode = False
+    st.session_state.split_mode = False
     st.session_state.selected_folds_for_merge = []
     st.session_state.selected_cells_for_split = {}
 
@@ -171,14 +181,62 @@ st.markdown("---")
 # Display folds
 for dom, folds in st.session_state.cell_folds.items():
     for fname, cell_list in folds.items():
+        # Get the label for this fold if it exists
+        fold_label = None
+        if "pipeline_path" in st.session_state:
+            cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+            if os.path.exists(cfg_path):
+                with open(cfg_path) as f:
+                    cfg = json.load(f)
+                fold_label = cfg.get("cell_fold_labels", {}).get(fname, "neutral")
+        
+        # Set color based on label
+        label_color = {
+            "correct": "green",
+            "false": "red",
+            "neutral": None  # No color for neutral, will use default
+        }.get(fold_label)
+        
         fold_cols = st.columns([4, 1, 1])
-        fold_cols[0].markdown(f"📦 **{fname}**")
+        # Only add color styling if there is a non-neutral label
+        if label_color:
+            fold_cols[0].markdown(f'📦 **<span style="color: {label_color}">{fname}</span>**', unsafe_allow_html=True)
+        else:
+            fold_cols[0].markdown(f"📦 **{fname}**")
+        
         if st.session_state.merge_mode:
             merge_selected = fold_cols[1].checkbox("Merge", key=f"merge_{fname}", label_visibility="hidden")
             if merge_selected and fname not in st.session_state.selected_folds_for_merge:
                 st.session_state.selected_folds_for_merge.append(fname)
             elif not merge_selected and fname in st.session_state.selected_folds_for_merge:
                 st.session_state.selected_folds_for_merge.remove(fname)
+        elif st.session_state.bulk_annotate_mode:
+            # Add Correct/False buttons for bulk annotation
+            button_cols = fold_cols[1].columns(2)
+            if button_cols[0].button("✓", key=f"correct_{fname}"):
+                if "pipeline_path" in st.session_state:
+                    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+                    if os.path.exists(cfg_path):
+                        with open(cfg_path) as f:
+                            cfg = json.load(f)
+                        if "cell_fold_labels" not in cfg:
+                            cfg["cell_fold_labels"] = {}
+                        cfg["cell_fold_labels"][fname] = "correct"
+                        with open(cfg_path, "w") as f:
+                            json.dump(cfg, f, indent=2, default=_json_default)
+                        st.rerun()
+            if button_cols[1].button("✗", key=f"false_{fname}"):
+                if "pipeline_path" in st.session_state:
+                    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+                    if os.path.exists(cfg_path):
+                        with open(cfg_path) as f:
+                            cfg = json.load(f)
+                        if "cell_fold_labels" not in cfg:
+                            cfg["cell_fold_labels"] = {}
+                        cfg["cell_fold_labels"][fname] = "false"
+                        with open(cfg_path, "w") as f:
+                            json.dump(cfg, f, indent=2, default=_json_default)
+                        st.rerun()
         else:
             fold_cols[1].empty()
         fold_cols[2].empty()
@@ -214,9 +272,21 @@ for dom, folds in st.session_state.cell_folds.items():
                     )
                     if new_loc != fname:
                         old_dom = fold_to_domain[fname]
-                        st.session_state.cell_folds[old_dom][fname].remove(cell)
                         new_dom = fold_to_domain[new_loc]
+                        
+                        # Move the cell
+                        st.session_state.cell_folds[old_dom][fname].remove(cell)
                         st.session_state.cell_folds[new_dom][new_loc].append(cell)
+                        
+                        # Save the updated cell folds to configuration
+                        if "pipeline_path" in st.session_state:
+                            cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+                            with open(cfg_path, "r") as f:
+                                cfg = json.load(f)
+                            cfg["cell_folds"] = st.session_state.cell_folds
+                            with open(cfg_path, "w") as f:
+                                json.dump(cfg, f, indent=2, default=_json_default)
+                        
                         st.rerun()
             cell_cols[1].empty()
             if st.session_state.split_mode:
@@ -240,6 +310,41 @@ if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge
     if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge"):
         target_fold = st.session_state.selected_folds_for_merge[0]
         target_domain = fold_to_domain[target_fold]
+        
+        # Get the labels of all folds being merged
+        cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+        with open(cfg_path, "r") as f:
+            cfg = json.load(f)
+        
+        fold_labels = cfg.get("cell_fold_labels", {})
+        labels_to_merge = [fold_labels.get(fold, "neutral") for fold in st.session_state.selected_folds_for_merge]
+        
+        # Determine the final label based on the rules
+        has_correct = "correct" in labels_to_merge
+        has_false = "false" in labels_to_merge
+        all_correct_or_neutral = all(label in ["correct", "neutral"] for label in labels_to_merge)
+        
+        # Apply the rules
+        if has_correct and has_false:
+            final_label = "neutral"  # Rule: if conflict between correct and false -> neutral
+        elif all_correct_or_neutral and has_correct:
+            final_label = "correct"  # Rule: if all are correct or neutral, and at least one correct -> correct
+        elif has_false:
+            final_label = "false"    # Rule: if any false and no correct -> false
+        else:
+            final_label = "neutral"  # Default case
+        
+        # Update the label for the target fold
+        if "cell_fold_labels" not in cfg:
+            cfg["cell_fold_labels"] = {}
+        cfg["cell_fold_labels"][target_fold] = final_label
+        
+        # Remove labels for the source folds that will be deleted
+        for fold in st.session_state.selected_folds_for_merge[1:]:
+            if fold in cfg["cell_fold_labels"]:
+                del cfg["cell_fold_labels"][fold]
+        
+        # Perform the merge
         for fold in st.session_state.selected_folds_for_merge[1:]:
             source_domain = fold_to_domain[fold]
             # Extend target fold with cells from source fold
@@ -248,6 +353,11 @@ if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge
             )
             # Remove the source fold
             del st.session_state.cell_folds[source_domain][fold]
+        
+        # Save the updated configuration
+        with open(cfg_path, "w") as f:
+            json.dump(cfg, f, indent=2, default=_json_default)
+        
         st.session_state.selected_folds_for_merge = []
         st.session_state.merge_mode = False
         st.rerun()
