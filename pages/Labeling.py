@@ -807,7 +807,6 @@ if st.session_state.run_quality_folding:
                 metrics = {
                     "Precision": round(random.uniform(0.7, 0.9), 2),
                     "Recall": round(random.uniform(0.7, 0.9), 2),
-                    "Fold_label_influence": round(random.uniform(0.1, 0.4), 2)
                 }
                 metrics["F1"] = round(2 * (metrics["Precision"] * metrics["Recall"]) / 
                                     (metrics["Precision"] + metrics["Recall"]), 2)
