@@ -198,7 +198,7 @@ if st.session_state.get("run_folding"):
             st.markdown("---")
     
     # Button to save the current domain fold structure to the pipeline's configurations.json file.
-    if st.button("Save Domain Folds"):
+    if st.button("Save Domain Folds and Continue"):
         if "pipeline_path" in st.session_state:
             pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
             if os.path.exists(pipeline_config_path):
@@ -216,5 +216,5 @@ if st.session_state.get("run_folding"):
         else:
             st.warning("No pipeline selected; domain folds not saved.")
     
-    if st.button("Next"):
+    #if st.button("Next"):
         st.switch_page("pages/QualityBasedFolding.py")

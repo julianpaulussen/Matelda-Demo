@@ -401,7 +401,7 @@ if st.session_state.split_mode:
 st.markdown("---")
 
 # Save folds
-if st.button("💾 Save Cell Folds", key="save_cell_folds"):
+if st.button("💾 Save Cell Folds and Continue", key="save_cell_folds"):
     if "pipeline_path" in st.session_state:
         cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
         with open(cfg_path, "r") as f:
@@ -414,5 +414,5 @@ if st.button("💾 Save Cell Folds", key="save_cell_folds"):
         st.warning("⚠️ No pipeline path set.")
 
 # Next page button
-if st.button("Next", key="next_page"):
+# if st.button("Next", key="next_page"):
     st.switch_page("pages/Labeling.py")
