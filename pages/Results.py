@@ -49,9 +49,9 @@ if "pipeline_path" in st.session_state:
     if results:
         latest_result = results[-1]
         metrics = latest_result.get("metrics", {})
-        recall_score = metrics.get("recall", 0)
-        f1_score = metrics.get("f1", 0)
-        precision_score = metrics.get("precision", 0)
+        recall_score = metrics.get("Recall", 0)
+        f1_score = metrics.get("F1", 0)
+        precision_score = metrics.get("Precision", 0)
         current_time = latest_result.get("Time", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     else:
         # Fallback to default values if no results exist

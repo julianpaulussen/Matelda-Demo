@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import time
 import json
@@ -642,7 +643,7 @@ if st.session_state.run_quality_folding:
     # Create a container for the HTML component and store its key
     html_container = st.empty()
     with html_container:
-        st.components.v1.html(html_template, height=800, scrolling=False)
+        components.html(html_template, height=800, scrolling=False)
     
     # Initialize or get the labeling results from session state
     if "labeling_results" not in st.session_state:
@@ -651,7 +652,7 @@ if st.session_state.run_quality_folding:
     # JavaScript callback to handle labeling results
     components_container = st.empty()
     with components_container:
-        st.components.v1.html(
+        components.html(
             """
             <script>
             window.addEventListener('labeling_complete', function(e) {
@@ -804,12 +805,12 @@ if st.session_state.run_quality_folding:
                 
                 # Generate random metrics for this run
                 metrics = {
-                    "precision": round(random.uniform(0.7, 0.9), 2),
-                    "recall": round(random.uniform(0.7, 0.9), 2),
-                    "fold_label_influence": round(random.uniform(0.1, 0.4), 2)
+                    "Precision": round(random.uniform(0.7, 0.9), 2),
+                    "Recall": round(random.uniform(0.7, 0.9), 2),
+                    "Fold_label_influence": round(random.uniform(0.1, 0.4), 2)
                 }
-                metrics["f1"] = round(2 * (metrics["precision"] * metrics["recall"]) / 
-                                    (metrics["precision"] + metrics["recall"]), 2)
+                metrics["F1"] = round(2 * (metrics["Precision"] * metrics["Recall"]) / 
+                                    (metrics["Precision"] + metrics["Recall"]), 2)
                 
                 # Store the complete results
                 results_entry = {
@@ -820,7 +821,12 @@ if st.session_state.run_quality_folding:
                 
                 if "results" not in cfg:
                     cfg["results"] = []
-                cfg["results"].append(results_entry)
+
+                # Replace latest result if it's from the same day and pipeline
+                if cfg["results"] and cfg["results"][-1].get("Time", "").split(" ")[0] == current_time.split(" ")[0]:
+                    cfg["results"][-1] = results_entry
+                else:
+                    cfg["results"].append(results_entry)
                 
                 with open(cfg_path, "w") as f:
                     json.dump(cfg, f, indent=2)
