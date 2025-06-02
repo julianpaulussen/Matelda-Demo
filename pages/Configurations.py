@@ -34,6 +34,11 @@ if not os.path.exists(pipelines_folder):
 existing_pipelines = [f for f in os.listdir(pipelines_folder) if os.path.isdir(os.path.join(pipelines_folder, f))]
 placeholder = "Click here to select existing pipeline"
 
+# Initialize state for new pipeline validation
+if "valid_pipeline_name" not in st.session_state:
+    st.session_state.valid_pipeline_name = True
+
+
 def load_pipeline_config():
     """
     Load labeling budget and dataset from the selected pipeline's configuration JSON.
@@ -181,6 +186,14 @@ else:
         value=default_pipeline_name,
         key="new_pipeline_name"
     )
+    # Real-time validation for existing pipeline name
+    if new_pipeline_name:
+        new_folder_path = os.path.join(pipelines_folder, new_pipeline_name)
+        if os.path.exists(new_folder_path):
+            st.warning("A pipeline with that name already exists. Please choose a different name.")
+            st.session_state.valid_pipeline_name = False
+        else:
+            st.session_state.valid_pipeline_name = True
 
 # ----------------------------
 # Helper Functions for Saving Configurations
@@ -218,18 +231,17 @@ if st.button("Save and Continue"):
         # Create New Pipeline: Check for existing folder name
         if not new_pipeline_name:
             st.warning("Please enter a pipeline name.")
+        elif not st.session_state.valid_pipeline_name:
+            st.warning("Cannot save: pipeline name already exists.")
         else:
             new_folder_path = os.path.join(pipelines_folder, new_pipeline_name)
-            if os.path.exists(new_folder_path):
-                st.warning("A pipeline with that name already exists. Please choose a different name.")
-            else:
-                os.makedirs(new_folder_path)
-                pipeline_folder = new_folder_path
-                st.session_state.pipeline_path = pipeline_folder
-                config_to_save = {
-                    "selected_dataset": st.session_state.get("dataset_select"),
-                    "labeling_budget": st.session_state.get("budget_slider", labeling_budget),
-                }
-                save_config_to_json(config_to_save, pipeline_folder)
-                st.success(f"New pipeline created and configurations saved in {pipeline_folder}!")
-                st.switch_page("pages/DomainBasedFolding.py")
+            os.makedirs(new_folder_path)
+            pipeline_folder = new_folder_path
+            st.session_state.pipeline_path = pipeline_folder
+            config_to_save = {
+                "selected_dataset": st.session_state.get("dataset_select"),
+                "labeling_budget": st.session_state.get("budget_slider", labeling_budget),
+            }
+            save_config_to_json(config_to_save, pipeline_folder)
+            st.success(f"New pipeline created and configurations saved in {pipeline_folder}!")
+            st.switch_page("pages/DomainBasedFolding.py")
