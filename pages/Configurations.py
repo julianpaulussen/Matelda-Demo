@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import json
 import pandas as pd
+import zipfile
 
 # Hide default Streamlit menu
 st.markdown(
@@ -114,22 +115,49 @@ else:
     st.markdown("---")
     st.subheader("Dataset Selection")
     datasets_folder = os.path.join(os.path.dirname(__file__), "../datasets")
-    dataset_options = [f for f in os.listdir(datasets_folder) if os.path.isdir(os.path.join(datasets_folder, f))]
-    if not dataset_options:
-        st.warning("No dataset folders found in the datasets folder.")
+    # Ensure datasets folder exists
+    if not os.path.exists(datasets_folder):
+        os.makedirs(datasets_folder)
+    existing_dataset_options = [f for f in os.listdir(datasets_folder) if os.path.isdir(os.path.join(datasets_folder, f))]
+    add_new_label = "+ Add new dataset"
+    dataset_options = [add_new_label] + existing_dataset_options
+    # Determine default index for selectbox
+    if "dataset_select" in st.session_state and st.session_state["dataset_select"] in dataset_options:
+        default_index = dataset_options.index(st.session_state["dataset_select"])
     else:
-        # Set default index to "Demo" if it exists in options
-        default_index = dataset_options.index("Demo") if "Demo" in dataset_options else 0
-        # The selectbox widget writes its value into st.session_state['dataset_select']
-        selected_dataset_folder = st.selectbox(
-            "Select the dataset you want to use:",
-            options=dataset_options,
-            index=default_index,
-            key="dataset_select",
-            label_visibility="visible"
-        )
+        default_index = 1 if existing_dataset_options else 0
+    selected_dataset_folder = st.selectbox(
+        "Select the dataset you want to use:",
+        options=dataset_options,
+        index=default_index,
+        key="dataset_select",
+        label_visibility="visible"
+    )
+
+    # Handle adding new dataset
+    if selected_dataset_folder == add_new_label:
+        uploaded_file = st.file_uploader("Upload a zip file containing the dataset:", type=["zip"], key="dataset_zip_uploader")
+        if uploaded_file is not None:
+            status = st.empty()
+            with st.spinner(""):
+                status.text("Uploading...")
+                zip_filename = uploaded_file.name
+                dataset_name = os.path.splitext(zip_filename)[0]
+                new_dataset_path = os.path.join(datasets_folder, dataset_name)
+                # (…ensure unique folder name, mkdir, extract…)
+                status.text("Extracting...")
+                with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
+                    zip_ref.extractall(new_dataset_path)
+                status.text("Deleting unnecessary files...")
+                status.empty()
+            st.success(f"Uploaded: {zip_filename}")
+            st.success(f"Added new Dataset: {dataset_name}")
+    else:
         folder_path = os.path.join(datasets_folder, selected_dataset_folder)
-        st.write("Here is some information on the dataset.")
+        if os.path.isdir(folder_path):
+            st.write("Here is some information on the dataset.")
+        else:
+            st.warning("Selected dataset folder does not exist.")
     
     st.markdown("---")
     st.subheader("Labeling Budget")
