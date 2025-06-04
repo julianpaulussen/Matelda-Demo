@@ -122,8 +122,8 @@ else:
         os.makedirs(datasets_folder)
 
     # 2) Initialize our session_state buckets (only happens once)
-    if "last_uploaded_filename" not in st.session_state:
-        st.session_state["last_uploaded_filename"] = None
+    if "last_uploaded_file_id" not in st.session_state:
+        st.session_state["last_uploaded_file_id"] = None
 
     if "uploaded_dataset_names" not in st.session_state:
         # This will hold the list of folder‐names we've actually created
@@ -139,8 +139,8 @@ else:
 
     # 4) If the user has picked a new ZIP (filename changed), extract it once
     if uploaded_file is not None:
-        # Check if this is actually a *new* upload (so we don't re‐extract on every rerun)
-        if uploaded_file.name != st.session_state["last_uploaded_filename"]:
+        # Check if this is actually a *new* upload (so we don't re-extract on every rerun)
+        if id(uploaded_file) != st.session_state["last_uploaded_file_id"]:
             # Start extraction
             status = st.empty()
             with st.spinner("Uploading and extracting…"):
@@ -165,13 +165,14 @@ else:
                 status.empty()
 
             # Remember that we extracted this one, and record the created folder-name
-            st.session_state["last_uploaded_filename"] = uploaded_file.name
+            st.session_state["last_uploaded_file_id"] = id(uploaded_file)
             st.session_state["uploaded_dataset_names"].append(dataset_name)
         # else: same file as last time, so skip re-extraction
 
-    # 5) Show a persistent notification for **every** zip‐to‐folder we've done so far
-    for name in st.session_state["uploaded_dataset_names"]:
-        st.success(f"Added new dataset: {name}")
+    # 5) Show a notification only for the most recently uploaded dataset
+    if st.session_state["uploaded_dataset_names"]:
+        last_name = st.session_state["uploaded_dataset_names"][-1]
+        st.success(f"Added new dataset: {last_name}")
 
     # 6) Now list all folders under "../datasets" (including ones you uploaded previously,
     #    plus any that already existed on disk before you ran this app).
