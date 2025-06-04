@@ -122,8 +122,9 @@ else:
         os.makedirs(datasets_folder)
 
     # 2) Initialize our session_state buckets (only happens once)
-    if "last_uploaded_filename" not in st.session_state:
-        st.session_state["last_uploaded_filename"] = None
+    if "processed_file_ids" not in st.session_state:
+        # Track which uploaded files we've already extracted in this session
+        st.session_state["processed_file_ids"] = set()
 
     if "uploaded_dataset_names" not in st.session_state:
         # This will hold the list of folder‐names we've actually created
@@ -137,10 +138,14 @@ else:
         key="dataset_zip_uploader",
     )
 
-    # 4) If the user has picked a new ZIP (filename changed), extract it once
+    # 4) If the user has picked a new ZIP, extract it once per unique file upload
     if uploaded_file is not None:
-        # Check if this is actually a *new* upload (so we don't re‐extract on every rerun)
-        if uploaded_file.name != st.session_state["last_uploaded_filename"]:
+        file_id = getattr(uploaded_file, "id", None)
+        if file_id is None:
+            file_id = getattr(uploaded_file, "file_id", None)
+        if file_id is None:
+            file_id = id(uploaded_file)
+        if file_id not in st.session_state["processed_file_ids"]:
             # Start extraction
             status = st.empty()
             with st.spinner("Uploading and extracting…"):
@@ -165,9 +170,8 @@ else:
                 status.empty()
 
             # Remember that we extracted this one, and record the created folder-name
-            st.session_state["last_uploaded_filename"] = uploaded_file.name
+            st.session_state["processed_file_ids"].add(file_id)
             st.session_state["uploaded_dataset_names"].append(dataset_name)
-        # else: same file as last time, so skip re-extraction
 
     # 5) Show a persistent notification for **every** zip‐to‐folder we've done so far
     for name in st.session_state["uploaded_dataset_names"]:
