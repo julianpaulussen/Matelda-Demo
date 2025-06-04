@@ -3,6 +3,7 @@ import os
 import json
 import pandas as pd
 import zipfile
+import shutil
 
 # Hide default Streamlit menu
 st.markdown(
@@ -152,20 +153,43 @@ else:
                 status.text("Uploading…")
                 zip_filename = uploaded_file.name
                 base_name = os.path.splitext(zip_filename)[0]
-                new_dataset_path = os.path.join(datasets_folder, base_name)
-
-                # Auto‐increment if folder already exists
-                counter = 1
-                dataset_name = base_name
-                while os.path.exists(new_dataset_path):
-                    dataset_name = f"{base_name}_{counter}"
-                    new_dataset_path = os.path.join(datasets_folder, dataset_name)
-                    counter += 1
-
-                os.makedirs(new_dataset_path, exist_ok=True)
-                status.text("Extracting…")
                 with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
-                    zip_ref.extractall(new_dataset_path)
+                    entries = [info.filename for info in zip_ref.infolist() if info.filename and not info.filename.startswith("__MACOSX/")]
+                    top_dirs = {entry.split("/", 1)[0] for entry in entries}
+                    if len(top_dirs) == 1:
+                        inner_root = next(iter(top_dirs))
+                        dataset_base = inner_root.rstrip("/")
+                    else:
+                        dataset_base = base_name
+
+                    new_dataset_path = os.path.join(datasets_folder, dataset_base)
+
+                    # Auto‐increment if folder already exists
+                    counter = 1
+                    dataset_name = dataset_base
+                    while os.path.exists(new_dataset_path):
+                        dataset_name = f"{dataset_base}_{counter}"
+                        new_dataset_path = os.path.join(datasets_folder, dataset_name)
+                        counter += 1
+
+                    os.makedirs(new_dataset_path, exist_ok=True)
+                    status.text("Extracting…")
+                    if len(top_dirs) == 1:
+                        for member in zip_ref.infolist():
+                            member_name = member.filename
+                            if member_name.startswith(inner_root):
+                                member_name = member_name[len(inner_root):].lstrip("/")
+                            if not member_name:
+                                continue
+                            target_path = os.path.join(new_dataset_path, member_name)
+                            if member.is_dir():
+                                os.makedirs(target_path, exist_ok=True)
+                            else:
+                                os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                                with zip_ref.open(member) as src, open(target_path, "wb") as dst:
+                                    shutil.copyfileobj(src, dst)
+                    else:
+                        zip_ref.extractall(new_dataset_path)
                 status.text("Cleaning up…")
                 status.empty()
 
