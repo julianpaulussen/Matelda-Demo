@@ -71,3 +71,7 @@ Desktop.ini
 pipelines/*
 !pipelines/
 !pipelines/.gitignore
+
+# Ignore dataset directories with numbered suffixes
+datasets/Demo*/
+datasets/Quintet*/

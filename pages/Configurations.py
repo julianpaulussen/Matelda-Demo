@@ -149,6 +149,7 @@ else:
         current_id = getattr(uploaded_file, "id", None)
         # Check if this is actually a *new* upload (so we don't re-extract on every rerun)
         if current_id != st.session_state["last_uploaded_file_id"]:
+          
             # Start extraction
             status = st.empty()
             with st.spinner("Uploading and extracting…"):
@@ -174,6 +175,7 @@ else:
 
             # Remember that we extracted this one, and record the created folder-name
             st.session_state["last_uploaded_file_id"] = current_id
+
             st.session_state["uploaded_dataset_names"].append(dataset_name)
         # else: same file as last time, so skip re-extraction
 
