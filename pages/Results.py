@@ -210,16 +210,39 @@ st.dataframe(styled_all_df)
 
 
 st.markdown("---")
-# Share Result button to create a shareable message
+# Share Result button with additional share options
 if st.button("Share Result"):
     share_text = (
         f"Check out my Matelda results! Recall: {recall_score:.2f}, "
         f"F1: {f1_score:.2f}, Precision: {precision_score:.2f}"
     )
-    tweet_url = (
-        "https://twitter.com/intent/tweet?text=" + urllib.parse.quote_plus(share_text)
-    )
-    st.markdown(f"[Share on Twitter]({tweet_url})", unsafe_allow_html=True)
+
+    encoded = urllib.parse.quote_plus(share_text)
+    x_url = f"https://twitter.com/intent/tweet?text={encoded}"
+    fb_url = f"https://www.facebook.com/sharer/sharer.php?quote={encoded}"
+    ig_url = "https://www.instagram.com/"
+    ln_url = f"https://www.linkedin.com/sharing/share-offsite/?summary={encoded}"
+
+    share_html = f"""
+    <div id='share-container'>
+        <button id='os-share'>📱</button>
+        <a href='{x_url}' target='_blank'>🐦</a>
+        <a href='{fb_url}' target='_blank'>📘</a>
+        <a href='{ig_url}' target='_blank'>📸</a>
+        <a href='{ln_url}' target='_blank'>💼</a>
+    </div>
+    <script>
+    const shareData = {{title: 'Matelda Results', text: `{share_text}`}};
+    const btn = document.getElementById('os-share');
+    if(btn){{
+        btn.addEventListener('click', () => {{
+            if(navigator.share){{ navigator.share(shareData); }}
+            else{{ alert('Share not supported on this browser.'); }}
+        }});
+    }}
+    </script>
+    """
+    st.components.v1.html(share_html, height=50)
     st.code(share_text)
 
 st.balloons()
