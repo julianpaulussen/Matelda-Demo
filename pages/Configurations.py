@@ -122,12 +122,8 @@ else:
         os.makedirs(datasets_folder)
 
     # 2) Initialize our session_state buckets (only happens once)
-    if "last_uploaded_file_id" not in st.session_state:
-        # Streamlit assigns a stable ``id`` for each upload event.  This value
-        # persists across reruns but changes when the user uploads a file again
-        # (even if it's the same file).  We can therefore use it to detect
-        # whether an upload is actually new.
-        st.session_state["last_uploaded_file_id"] = None
+    if "last_uploaded_filename" not in st.session_state:
+        st.session_state["last_uploaded_filename"] = None
 
     if "uploaded_dataset_names" not in st.session_state:
         # This will hold the list of folder‐names we've actually created
@@ -141,15 +137,10 @@ else:
         key="dataset_zip_uploader",
     )
 
-    # 4) If the user has picked a new ZIP, extract it once per upload event
+    # 4) If the user has picked a new ZIP (filename changed), extract it once
     if uploaded_file is not None:
-        # ``UploadedFile`` exposes an ``id`` attribute that uniquely identifies
-        # a particular upload.  It remains constant across reruns but changes
-        # whenever the user uploads a file again.
-        current_id = getattr(uploaded_file, "id", None)
-        # Check if this is actually a *new* upload (so we don't re-extract on every rerun)
-        if current_id != st.session_state["last_uploaded_file_id"]:
-          
+        # Check if this is actually a *new* upload (so we don't re‐extract on every rerun)
+        if uploaded_file.name != st.session_state["last_uploaded_filename"]:
             # Start extraction
             status = st.empty()
             with st.spinner("Uploading and extracting…"):
@@ -174,15 +165,13 @@ else:
                 status.empty()
 
             # Remember that we extracted this one, and record the created folder-name
-            st.session_state["last_uploaded_file_id"] = current_id
-
+            st.session_state["last_uploaded_filename"] = uploaded_file.name
             st.session_state["uploaded_dataset_names"].append(dataset_name)
         # else: same file as last time, so skip re-extraction
 
-    # 5) Show a notification only for the most recently uploaded dataset
-    if st.session_state["uploaded_dataset_names"]:
-        last_name = st.session_state["uploaded_dataset_names"][-1]
-        st.success(f"Added new dataset: {last_name}")
+    # 5) Show a persistent notification for **every** zip‐to‐folder we've done so far
+    for name in st.session_state["uploaded_dataset_names"]:
+        st.success(f"Added new dataset: {name}")
 
     # 6) Now list all folders under "../datasets" (including ones you uploaded previously,
     #    plus any that already existed on disk before you ran this app).
