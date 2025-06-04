@@ -123,6 +123,10 @@ else:
 
     # 2) Initialize our session_state buckets (only happens once)
     if "last_uploaded_file_id" not in st.session_state:
+        # Streamlit assigns a stable ``id`` for each upload event.  This value
+        # persists across reruns but changes when the user uploads a file again
+        # (even if it's the same file).  We can therefore use it to detect
+        # whether an upload is actually new.
         st.session_state["last_uploaded_file_id"] = None
 
     if "uploaded_dataset_names" not in st.session_state:
@@ -137,10 +141,14 @@ else:
         key="dataset_zip_uploader",
     )
 
-    # 4) If the user has picked a new ZIP (filename changed), extract it once
+    # 4) If the user has picked a new ZIP, extract it once per upload event
     if uploaded_file is not None:
+        # ``UploadedFile`` exposes an ``id`` attribute that uniquely identifies
+        # a particular upload.  It remains constant across reruns but changes
+        # whenever the user uploads a file again.
+        current_id = getattr(uploaded_file, "id", None)
         # Check if this is actually a *new* upload (so we don't re-extract on every rerun)
-        if id(uploaded_file) != st.session_state["last_uploaded_file_id"]:
+        if current_id != st.session_state["last_uploaded_file_id"]:
             # Start extraction
             status = st.empty()
             with st.spinner("Uploading and extracting…"):
@@ -165,7 +173,7 @@ else:
                 status.empty()
 
             # Remember that we extracted this one, and record the created folder-name
-            st.session_state["last_uploaded_file_id"] = id(uploaded_file)
+            st.session_state["last_uploaded_file_id"] = current_id
             st.session_state["uploaded_dataset_names"].append(dataset_name)
         # else: same file as last time, so skip re-extraction
 
