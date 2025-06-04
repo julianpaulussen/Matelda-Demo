@@ -181,6 +181,8 @@ else:
 
     # 6) Now list all folders under "../datasets" (including ones you uploaded previously,
     #    plus any that already existed on disk before you ran this app).
+    st.markdown("##### Select Dataset")
+    
     dataset_options = [
         d
         for d in os.listdir(datasets_folder)
@@ -195,8 +197,6 @@ else:
             key="dataset_select",
             label_visibility="visible"
         )
-        st.write(f"Using dataset folder: **{selected_dataset_folder}**")
-
         st.write(f"Here is some information about the selected dataset: `Insert Information`")
 
 
