@@ -118,47 +118,69 @@ else:
     # Ensure datasets folder exists
     if not os.path.exists(datasets_folder):
         os.makedirs(datasets_folder)
-    existing_dataset_options = [f for f in os.listdir(datasets_folder) if os.path.isdir(os.path.join(datasets_folder, f))]
-    add_new_label = "+ Add new dataset"
-    dataset_options = [add_new_label] + existing_dataset_options
-    # Determine default index for selectbox
-    if "dataset_select" in st.session_state and st.session_state["dataset_select"] in dataset_options:
-        default_index = dataset_options.index(st.session_state["dataset_select"])
-    else:
-        default_index = 1 if existing_dataset_options else 0
-    selected_dataset_folder = st.selectbox(
-        "Select the dataset you want to use:",
-        options=dataset_options,
-        index=default_index,
-        key="dataset_select",
-        label_visibility="visible"
+
+    # Initialize our “already extracted” flag if it’s not there yet
+    if "dataset_extracted" not in st.session_state:
+        st.session_state["dataset_extracted"] = False
+
+    # 1) Add Dataset (optional) – always visible first
+    st.markdown("##### Add Dataset (optional)")
+    uploaded_file = st.file_uploader(
+        "Upload a zip file containing the dataset:", 
+        type=["zip"], 
+        key="dataset_zip_uploader"
     )
 
-    # Handle adding new dataset
-    if selected_dataset_folder == add_new_label:
-        uploaded_file = st.file_uploader("Upload a zip file containing the dataset:", type=["zip"], key="dataset_zip_uploader")
-        if uploaded_file is not None:
-            status = st.empty()
-            with st.spinner(""):
-                status.text("Uploading...")
-                zip_filename = uploaded_file.name
-                dataset_name = os.path.splitext(zip_filename)[0]
+    # Only extract the ZIP once, the first time it appears.
+    if uploaded_file is not None and not st.session_state["dataset_extracted"]:
+        status = st.empty()
+        with st.spinner("Uploading..."):
+            status.text("Uploading...")
+            zip_filename = uploaded_file.name
+            dataset_name = os.path.splitext(zip_filename)[0]
+            new_dataset_path = os.path.join(datasets_folder, dataset_name)
+
+            # Make sure the folder name is unique
+            counter = 1
+            base_name = dataset_name
+            while os.path.exists(new_dataset_path):
+                dataset_name = f"{base_name}_{counter}"
                 new_dataset_path = os.path.join(datasets_folder, dataset_name)
-                # (…ensure unique folder name, mkdir, extract…)
-                status.text("Extracting...")
-                with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
-                    zip_ref.extractall(new_dataset_path)
-                status.text("Deleting unnecessary files...")
-                status.empty()
-            st.success(f"Uploaded: {zip_filename}")
-            st.success(f"Added new Dataset: {dataset_name}")
+                counter += 1
+
+            os.makedirs(new_dataset_path, exist_ok=True)
+
+            status.text("Extracting...")
+            with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
+                zip_ref.extractall(new_dataset_path)
+
+            status.text("Cleaning up...")
+            status.empty()
+
+        st.success(f"Added new dataset: {dataset_name}")
+        # Mark that we’ve already extracted this particular upload
+        st.session_state["dataset_extracted"] = True
+
+    # ——————————————
+    # 2) Show existing‐dataset selector (runs whether or not you just uploaded)
+    dataset_options = [
+        f for f in os.listdir(datasets_folder) 
+        if os.path.isdir(os.path.join(datasets_folder, f))
+    ]
+    if not dataset_options:
+        st.warning("No dataset folders found in the datasets folder.")
     else:
+        # The selectbox widget writes its value into st.session_state['dataset_select']
+        selected_dataset_folder = st.selectbox(
+            "Select the dataset you want to use:",
+            options=dataset_options,
+            key="dataset_select",
+            label_visibility="visible"
+        )
         folder_path = os.path.join(datasets_folder, selected_dataset_folder)
-        if os.path.isdir(folder_path):
-            st.write("Here is some information on the dataset.")
-        else:
-            st.warning("Selected dataset folder does not exist.")
-    
+        st.write(f"Here is some information about the selected dataset: `Insert Information`")
+
+
     st.markdown("---")
     st.subheader("Labeling Budget")
     labeling_budget = st.slider(
