@@ -112,72 +112,85 @@ else:
     # ----------------------------
     # Create New Pipeline: Dataset & Budget Selection
     # ----------------------------
+
     st.markdown("---")
     st.subheader("Dataset Selection")
+
+    # 1) Make sure "../datasets" exists
     datasets_folder = os.path.join(os.path.dirname(__file__), "../datasets")
-    # Ensure datasets folder exists
     if not os.path.exists(datasets_folder):
         os.makedirs(datasets_folder)
 
-    # Initialize our “already extracted” flag if it’s not there yet
-    if "dataset_extracted" not in st.session_state:
-        st.session_state["dataset_extracted"] = False
+    # 2) Initialize our session_state buckets (only happens once)
+    if "last_uploaded_filename" not in st.session_state:
+        st.session_state["last_uploaded_filename"] = None
 
-    # 1) Add Dataset (optional) – always visible first
+    if "uploaded_dataset_names" not in st.session_state:
+        # This will hold the list of folder‐names we've actually created
+        st.session_state["uploaded_dataset_names"] = []
+
+    # 3) File uploader (always visible)
     st.markdown("##### Add Dataset (optional)")
     uploaded_file = st.file_uploader(
         "Upload a zip file containing the dataset:", 
         type=["zip"], 
-        key="dataset_zip_uploader"
+        key="dataset_zip_uploader",
     )
 
-    # Only extract the ZIP once, the first time it appears.
-    if uploaded_file is not None and not st.session_state["dataset_extracted"]:
-        status = st.empty()
-        with st.spinner("Uploading..."):
-            status.text("Uploading...")
-            zip_filename = uploaded_file.name
-            dataset_name = os.path.splitext(zip_filename)[0]
-            new_dataset_path = os.path.join(datasets_folder, dataset_name)
+    # 4) If the user has picked a new ZIP (filename changed), extract it once
+    if uploaded_file is not None:
+        # Check if this is actually a *new* upload (so we don't re‐extract on every rerun)
+        if uploaded_file.name != st.session_state["last_uploaded_filename"]:
+            # Start extraction
+            status = st.empty()
+            with st.spinner("Uploading and extracting…"):
+                status.text("Uploading…")
+                zip_filename = uploaded_file.name
+                base_name = os.path.splitext(zip_filename)[0]
+                new_dataset_path = os.path.join(datasets_folder, base_name)
 
-            # Make sure the folder name is unique
-            counter = 1
-            base_name = dataset_name
-            while os.path.exists(new_dataset_path):
-                dataset_name = f"{base_name}_{counter}"
-                new_dataset_path = os.path.join(datasets_folder, dataset_name)
-                counter += 1
+                # Auto‐increment if folder already exists
+                counter = 1
+                dataset_name = base_name
+                while os.path.exists(new_dataset_path):
+                    dataset_name = f"{base_name}_{counter}"
+                    new_dataset_path = os.path.join(datasets_folder, dataset_name)
+                    counter += 1
 
-            os.makedirs(new_dataset_path, exist_ok=True)
+                os.makedirs(new_dataset_path, exist_ok=True)
+                status.text("Extracting…")
+                with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
+                    zip_ref.extractall(new_dataset_path)
+                status.text("Cleaning up…")
+                status.empty()
 
-            status.text("Extracting...")
-            with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
-                zip_ref.extractall(new_dataset_path)
+            # Remember that we extracted this one, and record the created folder-name
+            st.session_state["last_uploaded_filename"] = uploaded_file.name
+            st.session_state["uploaded_dataset_names"].append(dataset_name)
+        # else: same file as last time, so skip re-extraction
 
-            status.text("Cleaning up...")
-            status.empty()
+    # 5) Show a persistent notification for **every** zip‐to‐folder we've done so far
+    for name in st.session_state["uploaded_dataset_names"]:
+        st.success(f"Added new dataset: {name}")
 
-        st.success(f"Added new dataset: {dataset_name}")
-        # Mark that we’ve already extracted this particular upload
-        st.session_state["dataset_extracted"] = True
-
-    # ——————————————
-    # 2) Show existing‐dataset selector (runs whether or not you just uploaded)
+    # 6) Now list all folders under "../datasets" (including ones you uploaded previously,
+    #    plus any that already existed on disk before you ran this app).
     dataset_options = [
-        f for f in os.listdir(datasets_folder) 
-        if os.path.isdir(os.path.join(datasets_folder, f))
+        d
+        for d in os.listdir(datasets_folder)
+        if os.path.isdir(os.path.join(datasets_folder, d))
     ]
     if not dataset_options:
         st.warning("No dataset folders found in the datasets folder.")
     else:
-        # The selectbox widget writes its value into st.session_state['dataset_select']
         selected_dataset_folder = st.selectbox(
             "Select the dataset you want to use:",
             options=dataset_options,
             key="dataset_select",
             label_visibility="visible"
         )
-        folder_path = os.path.join(datasets_folder, selected_dataset_folder)
+        st.write(f"Using dataset folder: **{selected_dataset_folder}**")
+
         st.write(f"Here is some information about the selected dataset: `Insert Information`")
 
 
