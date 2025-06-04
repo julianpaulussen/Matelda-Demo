@@ -37,8 +37,9 @@ streamlit run app.py
 ## ⚡ Features
 ✅ **Interactive UI** – Experience a seamless and user-friendly interface.  
 ✅ **Live Data Processing** – Real-time visualization and analysis.  
-✅ **Custom Configurations** – Easily modify parameters within the app.  
-✅ **Open Source** – Contributions and enhancements are welcome!  
+✅ **Custom Configurations** – Easily modify parameters within the app.
+✅ **Share Results** – Quickly share your metrics with a single click.
+✅ **Open Source** – Contributions and enhancements are welcome!
 
 ---
 
