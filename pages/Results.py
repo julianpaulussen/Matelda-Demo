@@ -63,30 +63,6 @@ with col2:
 with col3:
     st.metric(label="Precision", value=f"{precision_score:.2f}")
 
-# Save Result button positioned immediately after metrics
-if st.button("Save Result"):
-    if "pipeline_path" in st.session_state:
-        pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
-        config = {}
-        if os.path.exists(pipeline_config_path):
-            with open(pipeline_config_path, "r") as f:
-                config = json.load(f)
-        historical_results = config.get("results", [])
-        new_result = {
-            "Time": current_time,
-            "Recall": recall_score,
-            "F1": f1_score,
-            "Precision": precision_score
-        }
-        historical_results.append(new_result)
-        config["results"] = historical_results
-        with open(pipeline_config_path, "w") as f:
-            json.dump(config, f, indent=4)
-        st.success("Result saved!")
-        st.rerun()  # Refresh the page to update the table
-    else:
-        st.warning("No pipeline selected; result not saved.")
-
 # -----------------------------------------------------------------------------
 # Ensure that the current dataset is defined in session state.
 # -----------------------------------------------------------------------------
@@ -232,6 +208,8 @@ st.markdown("#### Result Comparison (All Pipelines/Datasets):")
 st.write("_(Click on column headers to sort the table.)_")
 st.dataframe(styled_all_df)
 
+
+st.markdown("---")
 # Share Result button to create a shareable message
 if st.button("Share Result"):
     share_text = (
