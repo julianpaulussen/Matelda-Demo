@@ -23,6 +23,7 @@ with st.sidebar:
     st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
     st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
     st.page_link("pages/Labeling.py", label="Labeling")
+    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
