@@ -653,7 +653,7 @@ if st.session_state.run_quality_folding:
     # JavaScript callback to handle labeling results
     components_container = st.empty()
     with components_container:
-        components.html(
+        labeling_data = components.html(
             """
             <script>
             window.addEventListener('labeling_complete', function(e) {
@@ -664,8 +664,12 @@ if st.session_state.run_quality_folding:
             });
             </script>
             """,
-            height=0
+            height=0,
+            key="labeling_results_listener"
         )
+
+    if labeling_data:
+        st.session_state.labeling_results = labeling_data
 
     st.markdown("---")
 
