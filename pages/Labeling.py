@@ -1,9 +1,11 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import time
 import json
 import pandas as pd
 import os
+from backend import backend_sample_labeling, backend_label_propagation
 
 # Hide default Streamlit menu
 st.markdown("""
@@ -18,6 +20,7 @@ with st.sidebar:
     st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
     st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
     st.page_link("pages/Labeling.py", label="Labeling")
+    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
@@ -112,9 +115,10 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
     card_id = card["id"]
 
     # Create eight pill elements with labels "Strategy01" to "Strategy08"
+    strategies = card.get("strategies", {})
     pills_html = "".join([
-        f'<span class="pill" id="pill-{i}-{card_id}" style="padding: 4px 8px; font-size:9px; border-radius: 16px; background: #ddd;">Strategy{(i+1):02d}</span>'
-        for i in range(8)
+        f'<span class="pill" id="pill-{strategy}-{card_id}" style="padding: 4px 8px; font-size:9px; border-radius: 16px; background: {"#FF8C00" if is_active else "#ddd"}; color: {"white" if is_active else "black"};">{strategy}</span>'
+        for strategy, is_active in sorted(strategies.items())  # Sort to ensure consistent order
     ])
     
     return f"""
@@ -144,7 +148,7 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
             <div class="pills-header" style="padding: 4px 10px;">
               <h4 style="margin: 0; font-size: 16px;">Error Detection Strategies:</h4>
             </div>
-            <div class="pills-container" style="display: flex; justify-content: flex-start; gap: 8px; padding: 4px 10px;">
+            <div class="pills-container" style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; padding: 4px 10px;">
                 {pills_html}
             </div>
             <hr style="margin: 12px 10px; border: 0; border-top: 1px solid #ccc;" />
@@ -251,17 +255,6 @@ var rowIndexFormatter = function(cell, formatterParams, onRendered) {{
         flipCardBack.addEventListener("click", function() {{
             flipCardInner.style.transform = "rotateY(0deg)";
         }});
-        
-        // Randomly highlight some pills in the pills container
-        (function() {{
-            var pills = document.querySelectorAll("#card-{card_id} .pill");
-            pills.forEach(function(pill) {{
-                if (Math.random() < 0.3) {{
-                    pill.style.backgroundColor = "#FF8C00";
-                    pill.style.color = "white";
-                }}
-            }});
-        }})();
       </script>
     </div>
     """
@@ -278,21 +271,48 @@ st.title("Labeling")
 if not st.session_state.run_quality_folding:
     if st.button("Run Labeling"):
         with st.spinner("🔄 Processing... Please wait..."):
-            time.sleep(3)
+            # Get necessary data from session state
+            selected_dataset = st.session_state.get("dataset_select")
+            labeling_budget = st.session_state.get("labeling_budget", 10)
+            cell_folds = st.session_state.get("cell_folds", {})
+            domain_folds = st.session_state.get("domain_folds", {})
+            
+            # Call backend function to get sampled cells
+            sampled_cells = backend_sample_labeling(
+                selected_dataset=selected_dataset,
+                labeling_budget=labeling_budget,
+                cell_folds=cell_folds,
+                domain_folds=domain_folds
+            )
+            
+            # Store sampled cells in session state
+            st.session_state.sampled_cells = sampled_cells
+            time.sleep(2)  # Keep a small delay for UX
         st.session_state.run_quality_folding = True
         st.rerun()
 
-# Generate cards based on labeling budget and table_locations (with replacement if needed)
+# Generate cards based on sampled cells
 if st.session_state.run_quality_folding:
-    budget = st.session_state.get("labeling_budget", 10)
-    if "table_locations" in st.session_state:
-        available = list(st.session_state.table_locations.items())
-        cards = []
-        for i in range(budget):
-            table, domain_fold = random.choice(available)
-            cards.append({"id": i, "name": f"{domain_fold} – {table}", "table": table})
+    if "sampled_cells" in st.session_state:
+        cards = st.session_state.sampled_cells
     else:
-        cards = [{"id": i, "name": f"Card {i+1}", "table": None} for i in range(5)]
+        # Fallback to old behavior if no sampled cells (shouldn't happen)
+        budget = st.session_state.get("labeling_budget", 10)
+        if "table_locations" in st.session_state:
+            available = list(st.session_state.table_locations.items())
+            cards = []
+            for i in range(budget):
+                table, domain_fold = random.choice(available)
+                # Generate strategies for fallback case
+                strategies = {f"strategy{j:02d}": random.choice([True, False]) for j in range(1, 9)}
+                cards.append({
+                    "id": i,
+                    "name": f"{domain_fold} – {table}",
+                    "table": table,
+                    "strategies": strategies
+                })
+        else:
+            cards = [{"id": i, "name": f"Card {i+1}", "table": None, "strategies": {f"strategy{j:02d}": random.choice([True, False]) for j in range(1, 9)}} for i in range(5)]
     
     cards_html = "".join([get_card_html(card) for card in cards])
     
@@ -505,9 +525,34 @@ if st.session_state.run_quality_folding:
             return document.querySelector('.tinder--card');
           }}
 
+          // Add this JavaScript function to store labeling results
+          function storeLabelingResult(cardId, isError) {{
+            // Get the card data
+            var card = document.getElementById('card-' + cardId);
+            if (!card) return;
+            
+            // Store the result in a hidden input that Streamlit can read
+            var input = document.getElementById('labeled-results') || document.createElement('input');
+            input.id = 'labeled-results';
+            input.type = 'hidden';
+            
+            // Get existing results
+            var results = input.value ? JSON.parse(input.value) : {{}};
+            results[cardId] = isError;
+            input.value = JSON.stringify(results);
+            document.body.appendChild(input);
+            
+            // Trigger a custom event that Streamlit can listen for
+            const event = new CustomEvent('labeling_complete', {{ detail: {{ results: results }} }});
+            window.dispatchEvent(event);
+          }}
+          
+          // Modify the removeCard function to store results
           function removeCard(like) {{
             var card = getTopCard();
             if (!card) return;
+            var cardId = card.id.replace('card-', '');
+            storeLabelingResult(cardId, !like);  // like=true means not an error
             var toX = like ? 100 : -100;
             var angle = like ? 15 : -15;
             card.style.transform = 'translate(' + toX + 'vw, -10vh) rotate(' + angle + 'deg)';
@@ -586,18 +631,65 @@ if st.session_state.run_quality_folding:
     st.info(
         """
         **Labeling Instructions:**  
-        - **Swipe:** Swipe left on a card to mark it as "dislike" and swipe right to mark it as "like".  
+        - **Swipe:** Swipe left on a card to mark it as "error" and swipe right to mark it as "correct".  
         - **Buttons:**  
-          - Click the **x** button to register a "dislike".  
-          - Click the **✓** button to register a "like".  
+          - Click the **x** button to mark as "error".  
+          - Click the **✓** button to mark as "correct".  
           - Click the **↷** button to undo your last action.  
-        - Once you have labeled the sampled cell on the card, click the **Next** button below to proceed.
+        - Once you have labeled all cells, click the **Next** button below to proceed.
         """,
         icon="ℹ️"
     )
-    st.components.v1.html(html_template, height=800, scrolling=False)
+    
+    # Create a container for the HTML component and store its key
+    html_container = st.empty()
+    with html_container:
+        components.html(html_template, height=800, scrolling=False)
+    
+    # Initialize or get the labeling results from session state
+    if "labeling_results" not in st.session_state:
+        st.session_state.labeling_results = {}
+    
+    # JavaScript callback to handle labeling results
+    components_container = st.empty()
+    with components_container:
+        labeling_data = components.html(
+            """
+            <script>
+            window.addEventListener('labeling_complete', function(e) {
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: e.detail.results
+                }, '*');
+            });
+            </script>
+            """,
+            height=0,
+            key="labeling_results_listener"
+        )
+
+    if labeling_data:
+        st.session_state.labeling_results = labeling_data
 
     st.markdown("---")
 
     if st.button("Next"):
-      st.switch_page("pages/ErrorDetection.py")
+        labeled_cells = []
+        for card in cards:
+            is_error = st.session_state.labeling_results.get(str(card["id"]), False)
+            cell_info = {
+                "table": card.get("table"),
+                "is_error": is_error,
+                "row": card.get("row", 0),
+                "col": card.get("col", ""),
+                "val": card.get("val", ""),
+                "domain_fold": card.get("domain_fold", ""),
+                "cell_fold": card.get("cell_fold", "")
+            }
+            labeled_cells.append(cell_info)
+
+        selected_dataset = st.session_state.get("dataset_select")
+        propagation_results = backend_label_propagation(selected_dataset, labeled_cells)
+        st.session_state.propagation_results = propagation_results
+        st.session_state.propagation_saved = False
+        st.switch_page("pages/PropagatedErrors.py")

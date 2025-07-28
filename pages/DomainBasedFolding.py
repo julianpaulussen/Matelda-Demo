@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import os
-import random
 import time
 import json
+from backend import backend_dbf
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
@@ -26,6 +26,7 @@ with st.sidebar:
     st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
     st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
     st.page_link("pages/Labeling.py", label="Labeling")
+    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
@@ -35,10 +36,12 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
     if os.path.exists(config_path):
         with open(config_path) as f:
             config = json.load(f)
-        st.session_state["dataset_select"] = config.get("selected_dataset", "Quintet")
+        st.session_state["dataset_select"] = config.get("selected_dataset", "Demo")
 
-selected_dataset = st.session_state.get("dataset_select", "Quintet")
-datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
+selected_dataset = st.session_state.get("dataset_select", "Demo")
+# Use absolute path for datasets
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
 
 # Load saved domain folds only if a pipeline is selected and table_locations is not already set.
 if "pipeline_path" in st.session_state and "table_locations" not in st.session_state:
@@ -53,12 +56,7 @@ if "pipeline_path" in st.session_state and "table_locations" not in st.session_s
                 table: fold for fold, tables in saved_folds.items() for table in tables
             }
 
-# If table_locations is not already set (either from configuration or a previous run), assign tables randomly.
-if "table_locations" not in st.session_state:
-    tables = [f for f in os.listdir(datasets_path) if os.path.isdir(os.path.join(datasets_path, f))]
-    folds = ["Domain Fold 1", "Domain Fold 2", "Domain Fold 3"]
-    st.session_state.table_locations = {table: random.choice(folds) for table in tables}
-
+# Initialize session state variables
 if "merge_mode" not in st.session_state:
     st.session_state.merge_mode = False
 if "selected_folds" not in st.session_state:
@@ -80,7 +78,16 @@ def load_clean_table(table_name):
 # Button to start domain folding
 if st.button("▶️ Run Domain Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
-        time.sleep(2)
+        # Call the backend function to get domain folds
+        labeling_budget = st.session_state.get("labeling_budget", 10)  # Default to 10 if not set
+        result = backend_dbf(selected_dataset, labeling_budget)
+        domain_folds = result["domain_folds"]
+        
+        # Convert domain folds to table_locations format
+        st.session_state.table_locations = {
+            table: fold for fold, tables in domain_folds.items() for table in tables
+        }
+        time.sleep(2)  # Keep a small delay for UX
     st.session_state.run_folding = True
 
 if st.session_state.get("run_folding"):
@@ -192,7 +199,7 @@ if st.session_state.get("run_folding"):
             st.markdown("---")
     
     # Button to save the current domain fold structure to the pipeline's configurations.json file.
-    if st.button("Save Domain Folds"):
+    if st.button("Save Domain Folds and Continue"):
         if "pipeline_path" in st.session_state:
             pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
             if os.path.exists(pipeline_config_path):
@@ -210,5 +217,5 @@ if st.session_state.get("run_folding"):
         else:
             st.warning("No pipeline selected; domain folds not saved.")
     
-    if st.button("Next"):
+    #if st.button("Next"):
         st.switch_page("pages/QualityBasedFolding.py")
