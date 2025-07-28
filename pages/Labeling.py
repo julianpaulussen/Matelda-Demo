@@ -30,17 +30,25 @@ with st.sidebar:
 
 
 def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert a sampled cell into a card dictionary for streamlit-swipecards."""
-    txt = (
-        f"Table: {cell['table']}\n"
-        f"Row: {cell['row']}  Col: {cell['col']}\n"
-        f"Value: {cell['val']}"
-    )
+    """Create a card dictionary for streamlit-swipecards in table mode."""
+
+    dataset = st.session_state.get("dataset_select")
+    dataset_path = os.path.join("datasets", dataset, cell["table"], "clean.csv")
+
+    row = int(cell.get("row", 0))
+    column = cell.get("col", "")
+
     return {
-        "name": cell["name"],
-        "txt": txt,
-        "img": "https://via.placeholder.com/300x200.png",  # placeholder image
-        "key": str(cell["id"]),
+        "dataset_path": dataset_path,
+        "row_index": row,
+        "name": cell.get("name", ""),
+        "description": f"Value: {cell.get('val', '')}",
+        "highlight_cells": [{"row": row, "column": column}],
+        "highlight_rows": [{"row": row}],
+        "highlight_columns": [{"column": column}],
+        "center_table_row": row,
+        "center_table_column": column,
+        "key": str(cell.get("id")),
     }
 
 
@@ -79,12 +87,13 @@ if st.session_state.run_quality_folding:
     if "labeling_results" not in st.session_state:
         st.session_state.labeling_results = {}
 
-    if results:
-        for res in results:
-            card_id = res.get("key") or res.get("card_id")
-            direction = res.get("direction")
-            if card_id is not None and direction:
-                st.session_state.labeling_results[str(card_id)] = direction.lower() == "right"
+    if results and results.get("swipedCards"):
+        for swipe in results.get("swipedCards", []):
+            idx = swipe.get("index")
+            action = swipe.get("action")
+            if idx is not None and action in {"left", "right"} and idx < len(cards):
+                card_id = cards[idx]["id"]
+                st.session_state.labeling_results[str(card_id)] = action == "right"
 
     st.markdown("---")
 
