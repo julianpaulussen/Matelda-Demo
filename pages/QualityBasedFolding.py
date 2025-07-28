@@ -116,7 +116,6 @@ defaults = {
     "bulk_annotate_mode": False,  # New mode for bulk annotation
     "selected_folds_for_merge": [],  # List for merge mode
     "selected_cells_for_split": {},   # Dict for split mode
-    "active_cell": None
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -159,9 +158,62 @@ st.markdown("---")
 all_folds = []
 fold_to_domain = {}
 for dom, folds in st.session_state.cell_folds.items():
+
     for fname in folds:
         all_folds.append(fname)
         fold_to_domain[fname] = dom
+
+
+def show_cell_dialog(cell, fold_name):
+    r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
+    lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
+
+    @st.dialog(f"Details for {lbl}", width="large")
+    def _dialog():
+        st.markdown(f"### 📄 Table: `{tbl}`")
+        st.markdown(f"**🔹 Column:** `{c}`  \n**🔹 Row Index:** `{r}`")
+        st.markdown("---")
+        st.markdown("### 🧠 Error Detection Strategies:")
+        if "strategies" in cell:
+            for strategy, is_active in cell["strategies"].items():
+                status = "✅" if is_active else "❌"
+                st.markdown(f"{status} {strategy}")
+        else:
+            st.info("🧬 No strategies available for this cell")
+        st.markdown("---")
+        st.markdown("### 🔍 Full Table Preview with Highlight")
+        df_preview = load_clean_table(tbl)
+        styled = highlight_cell(r, c)(df_preview)
+        st.dataframe(styled, use_container_width=True)
+        st.markdown("---")
+        st.markdown("### 🔁 Move to another fold")
+        new_loc = st.radio(
+            f"Move `{lbl}` to:",
+            all_folds,
+            index=all_folds.index(fold_name),
+            key=f"move_{tbl}_{r}_{c}"
+        )
+        if new_loc != fold_name:
+            old_dom = fold_to_domain[fold_name]
+            new_dom = fold_to_domain[new_loc]
+
+            st.session_state.cell_folds[old_dom][fold_name].remove(cell)
+            st.session_state.cell_folds[new_dom][new_loc].append(cell)
+
+            if "pipeline_path" in st.session_state:
+                cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+                with open(cfg_path, "r") as f:
+                    cfg = json.load(f)
+                cfg["cell_folds"] = st.session_state.cell_folds
+                with open(cfg_path, "w") as f:
+                    json.dump(cfg, f, indent=2, default=_json_default)
+
+            st.rerun()
+        if st.button("Close", key=f"close_{tbl}_{r}_{c}"):
+            st.rerun()
+
+    _dialog()
+
 
 # Controls header
 header_cols = st.columns([4, 1, 1, 1])  # Added one more column
@@ -259,12 +311,7 @@ for dom, folds in st.session_state.cell_folds.items():
             cell_cols = st.columns([4, 1, 1])
             with cell_cols[0]:
                 if st.button(lbl, key=f"cell_{tbl}_{r}_{c}"):
-                    st.session_state.active_cell = {
-                        "cell": cell,
-                        "fold_name": fname,
-                        "domain": dom,
-                    }
-                    st.rerun()
+                    show_cell_dialog(cell, fname)
             cell_cols[1].empty()
             if st.session_state.split_mode:
                 split_selected = cell_cols[2].checkbox("Split here", key=f"split_{fname}_{tbl}_{r}_{c}", label_visibility="hidden")
@@ -280,57 +327,6 @@ for dom, folds in st.session_state.cell_folds.items():
             else:
                 cell_cols[2].empty()
 
-# Display detailed view for selected cell
-if "active_cell" in st.session_state and st.session_state.active_cell:
-    selected = st.session_state.active_cell
-    cell = selected["cell"]
-    r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
-    lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
-    st.markdown("---")
-    with st.expander(f"Details for {lbl}", expanded=True):
-        st.markdown(f"### 📄 Table: `{tbl}`")
-        st.markdown(f"**🔹 Column:** `{c}`  \n**🔹 Row Index:** `{r}`")
-        st.markdown("---")
-        st.markdown("### 🧠 Error Detection Strategies:")
-        if "strategies" in cell:
-            for strategy, is_active in cell["strategies"].items():
-                status = "✅" if is_active else "❌"
-                st.markdown(f"{status} {strategy}")
-        else:
-            st.info("🧬 No strategies available for this cell")
-        st.markdown("---")
-        st.markdown("### 🔍 Full Table Preview with Highlight")
-        df_preview = load_clean_table(tbl)
-        styled = highlight_cell(r, c)(df_preview)
-        st.dataframe(styled, use_container_width=True)
-        st.markdown("---")
-        st.markdown("### 🔁 Move to another fold")
-        new_loc = st.radio(
-            f"Move `{lbl}` to:",
-            all_folds,
-            index=all_folds.index(selected["fold_name"]),
-            key=f"move_{tbl}_{r}_{c}"
-        )
-        if new_loc != selected["fold_name"]:
-            old_dom = fold_to_domain[selected["fold_name"]]
-            new_dom = fold_to_domain[new_loc]
-
-            st.session_state.cell_folds[old_dom][selected["fold_name"]].remove(cell)
-            st.session_state.cell_folds[new_dom][new_loc].append(cell)
-
-            if "pipeline_path" in st.session_state:
-                cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
-                with open(cfg_path, "r") as f:
-                    cfg = json.load(f)
-                cfg["cell_folds"] = st.session_state.cell_folds
-                with open(cfg_path, "w") as f:
-                    json.dump(cfg, f, indent=2, default=_json_default)
-
-            st.session_state.active_cell = None
-            st.rerun()
-    if st.button("Close", key="close_active_cell"):
-        st.session_state.active_cell = None
-        st.rerun()
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
 if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge) > 1:
