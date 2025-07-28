@@ -14,6 +14,16 @@ st.markdown(
     """
     <style>
         [data-testid="stSidebarNav"] {display: none;}
+        /* Keep columns from wrapping on small screens */
+        @media (max-width: 768px) {
+            div[data-testid="stHorizontalBlock"] {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+            div[data-testid="stHorizontalBlock"] > div {
+                min-width: 120px;
+            }
+        }
     </style>
     """,
     unsafe_allow_html=True,
