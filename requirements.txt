@@ -36,3 +36,5 @@ typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
 watchdog==6.0.0
+streamlit-swipecards==0.2.0
+matplotlib==3.8.4
