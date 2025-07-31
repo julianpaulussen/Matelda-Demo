@@ -10,6 +10,16 @@ st.markdown(
     """
     <style>
         [data-testid="stSidebarNav"] {display: none;}
+        /* Keep columns from wrapping on small screens */
+        @media (max-width: 768px) {
+            div[data-testid="stHorizontalBlock"] {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+            div[data-testid="stHorizontalBlock"] > div {
+                min-width: 120px;
+            }
+        }
     </style>
     """,
     unsafe_allow_html=True,
@@ -70,6 +80,16 @@ def load_pipeline_config():
         st.session_state.budget_slider = 10
         st.session_state.preconfigured_dataset = "Not defined"
 
+
+def sync_slider_to_input():
+    """Keep the number input in sync when the slider changes."""
+    st.session_state.budget_input = st.session_state.budget_slider
+
+
+def sync_input_to_slider():
+    """Keep the slider in sync when the number input changes."""
+    st.session_state.budget_slider = st.session_state.budget_input
+
 pipeline_choice = st.radio(
     "Do you want to use an existing pipeline or create a new one?",
     options=["Create New Pipeline", "Use Existing Pipeline"],
@@ -92,24 +112,33 @@ if pipeline_choice == "Use Existing Pipeline":
     
     st.markdown("---")
     st.subheader("Labeling Budget")
-    current_budget = st.session_state.get("budget_slider", 10)
-    labeling_budget = st.slider(
-        "Select Labeling Budget:",
-        min_value=1,
-        max_value=100,
-        value=current_budget,
-        label_visibility="visible",
-    )
-    st.number_input(
-        "Enter Labeling Budget",
-        min_value=1,
-        max_value=100,
-        value=labeling_budget,
-        step=1,
-        key="budget_input",
-        label_visibility="hidden",
-    )
-    st.session_state.budget_slider = labeling_budget
+    st.session_state.setdefault("budget_slider", 10)
+    st.session_state.setdefault("budget_input", st.session_state.budget_slider)
+
+    col_slider, col_input = st.columns([3, 1])
+
+    with col_slider:
+        st.slider(
+            "Select Labeling Budget:",
+            min_value=1,
+            max_value=100,
+            key="budget_slider",
+            label_visibility="visible",
+            on_change=sync_slider_to_input,
+        )
+
+    with col_input:
+        st.number_input(
+            "Enter Labeling Budget",
+            min_value=1,
+            max_value=100,
+            step=1,
+            key="budget_input",
+            label_visibility="hidden",
+            on_change=sync_input_to_slider,
+        )
+
+    labeling_budget = st.session_state.get("budget_slider", 10)
 else:
     # ----------------------------
     # Create New Pipeline: Dataset & Budget Selection
@@ -227,23 +256,33 @@ else:
 
     st.markdown("---")
     st.subheader("Labeling Budget")
-    labeling_budget = st.slider(
-        "Select Labeling Budget:",
-        min_value=1,
-        max_value=100,
-        value=st.session_state.get("budget_slider", 10),
-        label_visibility="visible",
-    )
-    st.number_input(
-        "Enter Labeling Budget",
-        min_value=1,
-        max_value=100,
-        value=labeling_budget,
-        step=1,
-        key="budget_input",
-        label_visibility="hidden",
-    )
-    st.session_state.budget_slider = labeling_budget
+    st.session_state.setdefault("budget_slider", 10)
+    st.session_state.setdefault("budget_input", st.session_state.budget_slider)
+
+    col_slider, col_input = st.columns([3, 1])
+
+    with col_slider:
+        st.slider(
+            "Select Labeling Budget:",
+            min_value=1,
+            max_value=100,
+            key="budget_slider",
+            label_visibility="visible",
+            on_change=sync_slider_to_input,
+        )
+
+    with col_input:
+        st.number_input(
+            "Enter Labeling Budget",
+            min_value=1,
+            max_value=100,
+            step=1,
+            key="budget_input",
+            label_visibility="hidden",
+            on_change=sync_input_to_slider,
+        )
+
+    labeling_budget = st.session_state.get("budget_slider", 10)
     
     # ----------------------------
     # Suggest Unique Pipeline Folder Name at the Bottom
