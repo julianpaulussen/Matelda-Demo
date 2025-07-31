@@ -297,6 +297,10 @@ st.markdown(
     div.cell-row div[data-testid="stHorizontalBlock"] {
         gap:0 !important;
     }
+    div.fold-row div[data-testid="stHorizontalBlock"],
+    div.cell-row div[data-testid="stHorizontalBlock"] {
+        gap:0 !important;
+    }
     div.fold-row div[data-testid="column"],
     div.cell-row div[data-testid="column"] {
         padding:0 !important;
@@ -334,7 +338,7 @@ for dom, folds in st.session_state.cell_folds.items():
         }.get(fold_label)
         
         st.markdown('<div class="fold-row">', unsafe_allow_html=True)
-        fold_cols = st.columns([0.05, 0.75, 0.20])
+        fold_cols = st.columns([0.04, 0.76, 0.20])
 
         if st.session_state.merge_mode:
             merge_selected = fold_cols[0].checkbox(
@@ -395,7 +399,7 @@ for dom, folds in st.session_state.cell_folds.items():
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
             st.markdown('<div class="cell-row">', unsafe_allow_html=True)
-            cell_cols = st.columns([0.05, 0.95])
+            cell_cols = st.columns([0.03, 0.97])
             if st.session_state.split_mode:
                 split_selected = cell_cols[0].checkbox(
                     f"Select cell {tbl}-{r}-{c}",

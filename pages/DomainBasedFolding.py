@@ -192,7 +192,7 @@ if st.session_state.get("run_folding"):
     # Iterate over each fold and display the tables
     for fold_name, tables in domain_folds.items():
         st.markdown('<div class="fold-row">', unsafe_allow_html=True)
-        fold_cols = st.columns([0.05, 0.95])
+        fold_cols = st.columns([0.03, 0.97])
         if st.session_state.merge_mode:
             merge_selected = fold_cols[0].checkbox(
                 f"Select fold {fold_name}",
@@ -211,7 +211,7 @@ if st.session_state.get("run_folding"):
         # Display each table within the fold
         for table in tables:
             st.markdown('<div class="table-row">', unsafe_allow_html=True)
-            table_cols = st.columns([0.05, 0.95])
+            table_cols = st.columns([0.03, 0.97])
             if st.session_state.global_split_mode:
                 split_selected = table_cols[0].checkbox(
                     f"Select table {table}",
