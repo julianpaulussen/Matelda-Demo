@@ -6,8 +6,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.cluster import HDBSCAN
-
+# from sklearn.cluster import HDBSCAN
+from hdbscan import HDBSCAN
 
 def get_tables_hash(tables):
     """
