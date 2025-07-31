@@ -156,6 +156,7 @@ if st.session_state.get("run_folding"):
     st.markdown(
         """
         <style>
+        /* Action buttons styling */
         div.action-container div[data-testid="stHorizontalBlock"] {
             gap:0 !important;
         }
@@ -169,17 +170,77 @@ if st.session_state.get("run_folding"):
             background-color: #ff4b4b;
             color: white;
         }
+        
+        /* Comprehensive checkbox spacing fix */
         div.fold-row div[data-testid="stHorizontalBlock"],
         div.table-row div[data-testid="stHorizontalBlock"] {
-            gap:0 !important;
+            gap: 0 !important;
+            align-items: center !important;
         }
+        
+        /* Column containers - remove all padding/margins */
         div.fold-row div[data-testid="column"],
         div.table-row div[data-testid="column"] {
-            padding:0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            min-width: 0 !important;
         }
-        div.fold-row [data-testid="stCheckbox"],
-        div.table-row [data-testid="stCheckbox"] {
-            margin:0 !important;
+        
+        /* Checkbox containers - aggressive spacing removal */
+        div.fold-row div[data-testid="stCheckbox"],
+        div.table-row div[data-testid="stCheckbox"] {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            width: fit-content !important;
+        }
+        
+        /* Checkbox input elements themselves */
+        div.fold-row div[data-testid="stCheckbox"] > label,
+        div.table-row div[data-testid="stCheckbox"] > label {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: fit-content !important;
+            min-height: 0 !important;
+        }
+        
+        /* Checkbox input - remove any internal spacing */
+        div.fold-row div[data-testid="stCheckbox"] input[type="checkbox"],
+        div.table-row div[data-testid="stCheckbox"] input[type="checkbox"] {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 16px !important;
+            height: 16px !important;
+        }
+        
+        /* Target the first column specifically for checkbox columns */
+        div.fold-row div[data-testid="column"]:first-child,
+        div.table-row div[data-testid="column"]:first-child {
+            flex: 0 0 20px !important;
+            max-width: 20px !important;
+            overflow: visible !important;
+        }
+        
+        /* Remove any wrapper div spacing */
+        div.fold-row div[data-testid="stCheckbox"] > div,
+        div.table-row div[data-testid="stCheckbox"] > div {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            div.fold-row div[data-testid="column"]:first-child,
+            div.table-row div[data-testid="column"]:first-child {
+                flex: 0 0 18px !important;
+                max-width: 18px !important;
+            }
+            
+            div.fold-row div[data-testid="stCheckbox"] input[type="checkbox"],
+            div.table-row div[data-testid="stCheckbox"] input[type="checkbox"] {
+                width: 14px !important;
+                height: 14px !important;
+            }
         }
         </style>
         """,
@@ -192,7 +253,7 @@ if st.session_state.get("run_folding"):
     # Iterate over each fold and display the tables
     for fold_name, tables in domain_folds.items():
         st.markdown('<div class="fold-row">', unsafe_allow_html=True)
-        fold_cols = st.columns([0.03, 0.97])
+        fold_cols = st.columns([0.02, 0.98])
         if st.session_state.merge_mode:
             merge_selected = fold_cols[0].checkbox(
                 f"Select fold {fold_name}",
@@ -211,7 +272,7 @@ if st.session_state.get("run_folding"):
         # Display each table within the fold
         for table in tables:
             st.markdown('<div class="table-row">', unsafe_allow_html=True)
-            table_cols = st.columns([0.03, 0.97])
+            table_cols = st.columns([0.02, 0.98])
             if st.session_state.global_split_mode:
                 split_selected = table_cols[0].checkbox(
                     f"Select table {table}",

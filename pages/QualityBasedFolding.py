@@ -280,6 +280,7 @@ elif st.session_state.active_action == "bulk":
 st.markdown(
     """
     <style>
+    /* Action buttons styling */
     div.action-container div[data-testid="stHorizontalBlock"] {
         gap:0 !important;
     }
@@ -293,21 +294,77 @@ st.markdown(
         background-color: #ff4b4b;
         color: white;
     }
+    
+    /* Comprehensive checkbox spacing fix */
     div.fold-row div[data-testid="stHorizontalBlock"],
     div.cell-row div[data-testid="stHorizontalBlock"] {
-        gap:0 !important;
+        gap: 0 !important;
+        align-items: center !important;
     }
-    div.fold-row div[data-testid="stHorizontalBlock"],
-    div.cell-row div[data-testid="stHorizontalBlock"] {
-        gap:0 !important;
-    }
+    
+    /* Column containers - remove all padding/margins */
     div.fold-row div[data-testid="column"],
     div.cell-row div[data-testid="column"] {
-        padding:0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-width: 0 !important;
     }
-    div.fold-row [data-testid="stCheckbox"],
-    div.cell-row [data-testid="stCheckbox"] {
-        margin:0 !important;
+    
+    /* Checkbox containers - aggressive spacing removal */
+    div.fold-row div[data-testid="stCheckbox"],
+    div.cell-row div[data-testid="stCheckbox"] {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        width: fit-content !important;
+    }
+    
+    /* Checkbox input elements themselves */
+    div.fold-row div[data-testid="stCheckbox"] > label,
+    div.cell-row div[data-testid="stCheckbox"] > label {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: fit-content !important;
+        min-height: 0 !important;
+    }
+    
+    /* Checkbox input - remove any internal spacing */
+    div.fold-row div[data-testid="stCheckbox"] input[type="checkbox"],
+    div.cell-row div[data-testid="stCheckbox"] input[type="checkbox"] {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 16px !important;
+        height: 16px !important;
+    }
+    
+    /* Target the first column specifically for checkbox columns */
+    div.fold-row div[data-testid="column"]:first-child,
+    div.cell-row div[data-testid="column"]:first-child {
+        flex: 0 0 20px !important;
+        max-width: 20px !important;
+        overflow: visible !important;
+    }
+    
+    /* Remove any wrapper div spacing */
+    div.fold-row div[data-testid="stCheckbox"] > div,
+    div.cell-row div[data-testid="stCheckbox"] > div {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        div.fold-row div[data-testid="column"]:first-child,
+        div.cell-row div[data-testid="column"]:first-child {
+            flex: 0 0 18px !important;
+            max-width: 18px !important;
+        }
+        
+        div.fold-row div[data-testid="stCheckbox"] input[type="checkbox"],
+        div.cell-row div[data-testid="stCheckbox"] input[type="checkbox"] {
+            width: 14px !important;
+            height: 14px !important;
+        }
     }
     </style>
     """,
@@ -338,7 +395,7 @@ for dom, folds in st.session_state.cell_folds.items():
         }.get(fold_label)
         
         st.markdown('<div class="fold-row">', unsafe_allow_html=True)
-        fold_cols = st.columns([0.04, 0.76, 0.20])
+        fold_cols = st.columns([0.02, 0.78, 0.20])
 
         if st.session_state.merge_mode:
             merge_selected = fold_cols[0].checkbox(
@@ -399,7 +456,7 @@ for dom, folds in st.session_state.cell_folds.items():
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
             st.markdown('<div class="cell-row">', unsafe_allow_html=True)
-            cell_cols = st.columns([0.03, 0.97])
+            cell_cols = st.columns([0.02, 0.98])
             if st.session_state.split_mode:
                 split_selected = cell_cols[0].checkbox(
                     f"Select cell {tbl}-{r}-{c}",
