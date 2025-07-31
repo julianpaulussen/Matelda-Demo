@@ -4,7 +4,7 @@ import random
 from typing import Any, Dict, List
 
 import streamlit as st
-from domain_folding import load_from_cache, matelda_domain_folding, save_to_cache
+from .domain_folding import load_from_cache, matelda_domain_folding, save_to_cache
 
 
 def backend_dbf(dataset: str, labeling_budget: int) -> dict:
@@ -24,7 +24,7 @@ def backend_dbf(dataset: str, labeling_budget: int) -> dict:
         }
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = current_dir
+    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
     datasets_path = os.path.join(root_dir, "datasets", dataset)
 
     if not os.path.exists(datasets_path):
@@ -127,7 +127,7 @@ def backend_qbf(
     """
     # Get the actual tables from the dataset directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = current_dir  # backend.py is in the root directory
+    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
     datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
 
     cell_folds = {}
@@ -235,7 +235,7 @@ def backend_sample_labeling(
     """
     # Get the actual tables from the dataset directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = current_dir  # backend.py is in the root directory
+    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
     datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
 
     def generate_strategies():
@@ -412,7 +412,7 @@ def backend_label_propagation(
     """
     # Get the actual tables from the dataset directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = current_dir  # backend.py is in the root directory
+    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
     datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
 
     # Initialize results structure
@@ -508,7 +508,7 @@ def backend_pull_errors(selected_dataset: str) -> Dict[str, Any]:
     """
     # Get the actual tables from the dataset directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = current_dir  # backend.py is in the root directory
+    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
 
     # Get the pipeline path from session state
     if "pipeline_path" not in st.session_state:

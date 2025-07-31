@@ -4,36 +4,14 @@ import json
 import pandas as pd
 import zipfile
 import shutil
+from components import render_sidebar, apply_base_styles, get_datasets_path, load_pipeline_config, save_pipeline_config
 
-# Hide default Streamlit menu
-st.markdown(
-    """
-    <style>
-        [data-testid="stSidebarNav"] {display: none;}
-        /* Keep columns from wrapping on small screens */
-        @media (max-width: 768px) {
-            div[data-testid="stHorizontalBlock"] {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-            }
-            div[data-testid="stHorizontalBlock"] > div {
-                min-width: 120px;
-            }
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Set page config and apply base styles
+st.set_page_config(page_title="Configurations", layout="wide")
+apply_base_styles()
 
-with st.sidebar:
-    st.page_link("app.py", label="Matelda")
-    st.page_link("pages/Configurations.py", label="Configurations")
-    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
-    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
-    st.page_link("pages/Labeling.py", label="Labeling")
-    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
-    st.page_link("pages/ErrorDetection.py", label="Error Detection")
-    st.page_link("pages/Results.py", label="Results")
+# Sidebar navigation
+render_sidebar()
 
 st.title("Configurations")
 
@@ -52,7 +30,7 @@ if "valid_pipeline_name" not in st.session_state:
     st.session_state.valid_pipeline_name = True
 
 
-def load_pipeline_config():
+def load_pipeline_config_ui():
     """
     Load labeling budget and dataset from the selected pipeline's configuration JSON.
     Additionally, if a dataset is already selected in the UI (via st.session_state.dataset_select),
@@ -63,22 +41,19 @@ def load_pipeline_config():
     # Do nothing if the placeholder is still selected.
     if selected == placeholder:
         return
-    pipeline_config_path = os.path.join(pipelines_folder, selected, "configurations.json")
-    if os.path.exists(pipeline_config_path):
-        with open(pipeline_config_path, "r") as f:
-            pipeline_config = json.load(f)
-        pipeline_dataset = pipeline_config.get("selected_dataset", None)
-        # Get the dataset currently selected in the UI (from the selectbox, which writes to st.session_state.dataset_select)
-        current_dataset = st.session_state.get("dataset_select")
-        if current_dataset is None and pipeline_dataset:
-            st.session_state["dataset_select"] = pipeline_dataset
-            current_dataset = pipeline_dataset
-        # Update the budget regardless
-        st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
-        st.session_state.preconfigured_dataset = pipeline_dataset
-    else:
-        st.session_state.budget_slider = 10
-        st.session_state.preconfigured_dataset = "Not defined"
+    
+    pipeline_path = os.path.join(pipelines_folder, selected)
+    pipeline_config = load_pipeline_config(pipeline_path)
+    
+    pipeline_dataset = pipeline_config.get("selected_dataset", None)
+    # Get the dataset currently selected in the UI (from the selectbox, which writes to st.session_state.dataset_select)
+    current_dataset = st.session_state.get("dataset_select")
+    if current_dataset is None and pipeline_dataset:
+        st.session_state["dataset_select"] = pipeline_dataset
+        current_dataset = pipeline_dataset
+    # Update the budget regardless
+    st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
+    st.session_state.preconfigured_dataset = pipeline_dataset
 
 
 def sync_slider_to_input():
@@ -103,12 +78,12 @@ if pipeline_choice == "Use Existing Pipeline":
         "Select an existing pipeline:", 
         options=pipeline_options, 
         key="selected_pipeline",
-        on_change=load_pipeline_config
+        on_change=load_pipeline_config_ui
     )
     
     # On first load, load configuration if not already set.
     if "budget_slider" not in st.session_state:
-        load_pipeline_config()
+        load_pipeline_config_ui()
     
     st.markdown("---")
     st.subheader("Labeling Budget")
@@ -147,10 +122,8 @@ else:
     st.markdown("---")
     st.subheader("Dataset Selection")
 
-    # 1) Make sure "../datasets" exists
-    datasets_folder = os.path.join(os.path.dirname(__file__), "../datasets")
-    if not os.path.exists(datasets_folder):
-        os.makedirs(datasets_folder)
+    # 1) Get datasets folder path using component function
+    datasets_folder = os.path.dirname(get_datasets_path(""))  # Get parent directory of datasets
 
     # 2) Initialize our session_state buckets (only happens once)
     if "processed_file_ids" not in st.session_state:
@@ -334,9 +307,7 @@ else:
 
 def save_config_to_json(config, folder):
     """Saves the configuration dictionary as configurations.json inside the specified folder."""
-    config_path = os.path.join(folder, "configurations.json")
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=4)
+    save_pipeline_config(folder, config)
 
 # ----------------------------
 # Save and Continue Button
@@ -349,15 +320,14 @@ if st.button("Save and Continue"):
         else:
             pipeline_folder = os.path.join(pipelines_folder, st.session_state.selected_pipeline)
             st.session_state.pipeline_path = pipeline_folder
-            pipeline_config_path = os.path.join(pipeline_folder, "configurations.json")
-            config_to_save = {}
-            if os.path.exists(pipeline_config_path):
-                with open(pipeline_config_path, "r") as f:
-                    config_to_save = json.load(f)
+            
+            # Load existing config and update it
+            config_to_save = load_pipeline_config(pipeline_folder)
             config_to_save["labeling_budget"] = st.session_state.get("budget_slider", labeling_budget)
             config_to_save["selected_dataset"] = st.session_state.get("dataset_select")
-            with open(pipeline_config_path, "w") as f:
-                json.dump(config_to_save, f, indent=4)
+            
+            # Save updated config
+            save_pipeline_config(pipeline_folder, config_to_save)
             st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
             st.switch_page("pages/DomainBasedFolding.py")
     else:

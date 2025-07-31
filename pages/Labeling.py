@@ -5,28 +5,18 @@ import os
 from typing import Dict, Any, List
 
 from streamlit_swipecards import streamlit_swipecards
-
 from backend import backend_sample_labeling, backend_label_propagation
+from components import render_sidebar, apply_base_styles, get_datasets_path
 
-# Hide default Streamlit menu
-st.markdown(
-    """
-    <style>
-        [data-testid="stSidebarNav"] {display: none;}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Page setup
+st.set_page_config(page_title="Labeling", layout="wide")
+st.title("Labeling")
 
-with st.sidebar:
-    st.page_link("app.py", label="Matelda")
-    st.page_link("pages/Configurations.py", label="Configurations")
-    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
-    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
-    st.page_link("pages/Labeling.py", label="Labeling")
-    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
-    st.page_link("pages/ErrorDetection.py", label="Error Detection")
-    st.page_link("pages/Results.py", label="Results")
+# Apply base styles
+apply_base_styles()
+
+# Sidebar navigation
+render_sidebar()
 
 # Load dataset from pipeline config if not already in session_state
 if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
@@ -46,8 +36,8 @@ dataset = st.session_state.dataset_select
 def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
     """Return a table-mode card configuration for streamlit-swipecards."""
 
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    dataset_path = os.path.join(root_dir, "datasets", dataset, cell["table"], "clean.csv")
+    datasets_path = get_datasets_path(dataset)
+    dataset_path = os.path.join(datasets_path, cell["table"], "clean.csv")
 
     row = int(cell.get("row", 0))
     column = cell.get("col", "")

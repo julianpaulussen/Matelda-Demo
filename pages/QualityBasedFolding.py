@@ -5,30 +5,19 @@ import json
 import time
 import numpy as np
 from backend import backend_qbf
+from components import render_sidebar, apply_base_styles, apply_folding_styles, get_datasets_path, load_clean_table
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
 st.title("Quality Based Folding")
 
-# Hide default Streamlit menu
-st.markdown(
-    """
-    <style>
-        [data-testid=\"stSidebarNav\"] {display: none;}
-        /* Keep columns from wrapping on small screens */
-        @media (max-width: 768px) {
-            div[data-testid=\"stHorizontalBlock\"] {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-            }
-            div[data-testid=\"stHorizontalBlock\"] > div {
-                min-width: 120px;
-            }
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Apply base styles
+apply_base_styles()
+# Apply base styles
+apply_base_styles()
+
+# Sidebar navigation
+render_sidebar()
 
 # JSON encoder for NumPy types and pandas types
 def _json_default(obj):
@@ -52,17 +41,6 @@ def _json_default(obj):
         return obj
     raise TypeError(f"Type {obj.__class__.__name__} not serializable")
 
-# Sidebar navigation
-with st.sidebar:
-    st.page_link("app.py", label="Matelda")
-    st.page_link("pages/Configurations.py", label="Configurations")
-    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
-    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
-    st.page_link("pages/Labeling.py", label="Labeling")
-    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
-    st.page_link("pages/ErrorDetection.py", label="Error Detection")
-    st.page_link("pages/Results.py", label="Results")
-
 # Load selected dataset
 if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
@@ -77,12 +55,7 @@ if "dataset_select" not in st.session_state:
 
 # Paths
 dataset = st.session_state.dataset_select
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-datasets_dir = os.path.join(root_dir, "datasets", dataset)
-
-def load_clean_table(table_name):
-    path = os.path.join(datasets_dir, table_name, "clean.csv")
-    return pd.read_csv(path)
+datasets_dir = get_datasets_path(dataset)
 
 def highlight_cell(row_idx, col_name):
     def apply(df):
@@ -182,7 +155,7 @@ def show_cell_dialog(cell, fold_name):
             st.info("🧬 No strategies available for this cell")
         st.markdown("---")
         st.markdown("### 🔍 Full Table Preview with Highlight")
-        df_preview = load_clean_table(tbl)
+        df_preview = load_clean_table(tbl, datasets_dir)
         styled = highlight_cell(r, c)(df_preview)
         st.dataframe(styled, use_container_width=True)
         st.markdown("---")

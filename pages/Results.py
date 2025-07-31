@@ -5,22 +5,14 @@ import json
 import datetime
 import pandas as pd
 import urllib.parse
+from components import render_sidebar, apply_base_styles
 
-st.markdown("""
-    <style>
-        [data-testid="stSidebarNav"] {display: none;}
-    </style>
-""", unsafe_allow_html=True)
+# Set page config and apply base styles
+st.set_page_config(page_title="Results", layout="wide")
+apply_base_styles()
 
-with st.sidebar:
-    st.page_link("app.py", label="Matelda")
-    st.page_link("pages/Configurations.py", label="Configurations")
-    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
-    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
-    st.page_link("pages/Labeling.py", label="Labeling")
-    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
-    st.page_link("pages/ErrorDetection.py", label="Error Detection")
-    st.page_link("pages/Results.py", label="Results")
+# Sidebar navigation
+render_sidebar()
 
 st.title("Results")
 st.write("### Model Performance Metrics")
