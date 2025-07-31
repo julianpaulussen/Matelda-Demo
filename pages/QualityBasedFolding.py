@@ -191,7 +191,7 @@ def show_cell_dialog(cell, fold_name):
             f"Move `{lbl}` to:",
             all_folds,
             index=all_folds.index(fold_name),
-            key=f"move_{tbl}_{r}_{c}"
+            key=f"move_{fold_name}_{tbl}_{r}_{c}_{id(cell)}"
         )
         if new_loc != fold_name:
             old_dom = fold_to_domain[fold_name]
@@ -209,7 +209,7 @@ def show_cell_dialog(cell, fold_name):
                     json.dump(cfg, f, indent=2, default=_json_default)
 
             st.rerun()
-        if st.button("Close", key=f"close_{tbl}_{r}_{c}"):
+        if st.button("Close", key=f"close_{fold_name}_{tbl}_{r}_{c}_{id(cell)}"):
             st.rerun()
 
     _dialog()
@@ -305,16 +305,16 @@ for dom, folds in st.session_state.cell_folds.items():
             fold_cols[1].empty()
         fold_cols[2].empty()
 
-        for cell in cell_list:
+        for cell_idx, cell in enumerate(cell_list):
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
             cell_cols = st.columns([4, 1, 1])
             with cell_cols[0]:
-                if st.button(lbl, key=f"cell_{tbl}_{r}_{c}"):
+                if st.button(lbl, key=f"cell_{fname}_{tbl}_{r}_{c}_{cell_idx}"):
                     show_cell_dialog(cell, fname)
             cell_cols[1].empty()
             if st.session_state.split_mode:
-                split_selected = cell_cols[2].checkbox("Split here", key=f"split_{fname}_{tbl}_{r}_{c}", label_visibility="hidden")
+                split_selected = cell_cols[2].checkbox("Split here", key=f"split_{fname}_{tbl}_{r}_{c}_{cell_idx}", label_visibility="hidden")
                 if fname not in st.session_state.selected_cells_for_split:
                     st.session_state.selected_cells_for_split[fname] = []
                 selected_cells = st.session_state.selected_cells_for_split.get(fname, [])
