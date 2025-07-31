@@ -75,6 +75,8 @@ if "global_split_mode" not in st.session_state:
     st.session_state.global_split_mode = False
 if "selected_split_tables" not in st.session_state:
     st.session_state.selected_split_tables = {}
+if "active_action" not in st.session_state:
+    st.session_state.active_action = None
 
 # Function to load the "clean.csv" file for a given table (i.e. subfolder)
 def load_clean_table(table_name):
@@ -102,44 +104,133 @@ if st.button("▶️ Run Domain Based Folding"):
 
 if st.session_state.get("run_folding"):
     st.markdown("---")
-    
+
     # Group tables by their assigned fold
     domain_folds = {}
     for table, fold in st.session_state.table_locations.items():
         domain_folds.setdefault(fold, []).append(table)
-    
-    # HEADER: Global action buttons for merging and splitting folds
-    header_cols = st.columns([4, 1, 1])
-    header_cols[0].markdown("**Fold / Table**")
-    if header_cols[1].button("Merge Folds", key="global_merge_button"):
-        st.info("Merge Folds: Combine multiple domain folds into one. Select the folds you wish to merge, and all tables from those folds will be grouped under a single fold.", icon="ℹ️")
-        st.session_state.merge_mode = True
+
+    # OPTIONS / ACTION section
+    st.markdown("### Options / Action")
+    def set_action(action):
+        st.session_state.active_action = action
+        st.session_state.merge_mode = action == "merge"
+        st.session_state.global_split_mode = action == "split"
         st.session_state.selected_folds = []
-    if header_cols[2].button("Split Folds", key="global_split_button"):
-        st.info("Split Folds: Divide a domain fold into separate folds. Choose the tables at which you want the split to occur; the folds will be split immediately below the selected tables, separating the tables into multiple groups.", icon="ℹ️")
-        st.session_state.global_split_mode = True
         st.session_state.selected_split_tables = {}
-    
+
+    merge_type = "primary" if st.session_state.active_action == "merge" else "secondary"
+    split_type = "primary" if st.session_state.active_action == "split" else "secondary"
+
+    st.markdown('<div class="action-container">', unsafe_allow_html=True)
+    action_cols = st.columns(2)
+    action_cols[0].button(
+        "Merge Folds",
+        key="global_merge_button",
+        type=merge_type,
+        on_click=set_action,
+        args=("merge",),
+        use_container_width=True,
+    )
+    action_cols[1].button(
+        "Split Folds",
+        key="global_split_button",
+        type=split_type,
+        on_click=set_action,
+        args=("split",),
+        use_container_width=True,
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if st.session_state.active_action == "merge":
+        st.info(
+            "Merge Folds: Combine multiple domain folds into one. Select the folds you wish to merge, and all tables from those folds will be grouped under a single fold.",
+            icon="ℹ️",
+        )
+    elif st.session_state.active_action == "split":
+        st.info(
+            "Split Folds: Divide a domain fold into separate folds. Choose the tables at which you want the split to occur; the folds will be split immediately below the selected tables, separating the tables into multiple groups.",
+            icon="ℹ️",
+        )
+
+    st.markdown(
+        """
+        <style>
+        div.action-container div[data-testid="stHorizontalBlock"] {
+            gap:0 !important;
+        }
+        div.action-container div[data-testid="column"] {
+            padding:0 !important;
+        }
+        div.action-container button {
+            margin:0 !important;
+        }
+        div[data-testid="baseButton-primary"] > button {
+            background-color: #ff4b4b;
+            color: white;
+        }
+        div.fold-row div[data-testid="stHorizontalBlock"],
+        div.table-row div[data-testid="stHorizontalBlock"] {
+            gap:0 !important;
+        }
+        div.fold-row div[data-testid="column"],
+        div.table-row div[data-testid="column"] {
+            padding:0 !important;
+        }
+        div.fold-row [data-testid="stCheckbox"],
+        div.table-row [data-testid="stCheckbox"] {
+            margin:0 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("---")
+    st.markdown("### Fold / Table")
     
     # Iterate over each fold and display the tables
     for fold_name, tables in domain_folds.items():
-        fold_cols = st.columns([4, 1, 1])
-        fold_cols[0].markdown(f"**{fold_name}**")
+        st.markdown('<div class="fold-row">', unsafe_allow_html=True)
+        fold_cols = st.columns([0.05, 0.95])
         if st.session_state.merge_mode:
-            merge_selected = fold_cols[1].checkbox("Merge", key=f"merge_{fold_name}", label_visibility="hidden")
+            merge_selected = fold_cols[0].checkbox(
+                f"Select fold {fold_name}",
+                key=f"merge_{fold_name}",
+                label_visibility="collapsed",
+            )
             if merge_selected and fold_name not in st.session_state.selected_folds:
                 st.session_state.selected_folds.append(fold_name)
             elif not merge_selected and fold_name in st.session_state.selected_folds:
                 st.session_state.selected_folds.remove(fold_name)
         else:
-            fold_cols[1].empty()
-        fold_cols[2].empty()
-        
+            fold_cols[0].empty()
+        fold_cols[1].markdown(f"**{fold_name}**")
+        st.markdown('</div>', unsafe_allow_html=True)
+
         # Display each table within the fold
         for table in tables:
-            table_cols = st.columns([4, 1, 1])
-            with table_cols[0].expander(f"📊 {table}"):
+            st.markdown('<div class="table-row">', unsafe_allow_html=True)
+            table_cols = st.columns([0.05, 0.95])
+            if st.session_state.global_split_mode:
+                split_selected = table_cols[0].checkbox(
+                    f"Select table {table}",
+                    key=f"split_{fold_name}_{table}",
+                    label_visibility="collapsed",
+                )
+                if fold_name not in st.session_state.selected_split_tables:
+                    st.session_state.selected_split_tables[fold_name] = []
+                selected_tables = st.session_state.selected_split_tables[fold_name]
+                if split_selected and table not in selected_tables:
+                    selected_tables.append(table)
+                    st.session_state.selected_split_tables[fold_name] = selected_tables
+                elif not split_selected and table in selected_tables:
+                    selected_tables.remove(table)
+                    st.session_state.selected_split_tables[fold_name] = selected_tables
+            else:
+                table_cols[0].empty()
+
+            with table_cols[1].expander(f"📊 {table}"):
                 df = load_clean_table(table)
                 st.dataframe(df)
                 new_location = st.radio(
@@ -151,42 +242,27 @@ if st.session_state.get("run_folding"):
                 if new_location != st.session_state.table_locations[table]:
                     st.session_state.table_locations[table] = new_location
                     st.rerun()
-            table_cols[1].empty()
-            if st.session_state.global_split_mode:
-                split_selected = table_cols[2].checkbox("Split here", key=f"split_{fold_name}_{table}", label_visibility="hidden")
-                if fold_name not in st.session_state.selected_split_tables:
-                    st.session_state.selected_split_tables[fold_name] = []
-                selected_tables = st.session_state.selected_split_tables[fold_name]
-                if split_selected and table not in selected_tables:
-                    selected_tables.append(table)
-                    st.session_state.selected_split_tables[fold_name] = selected_tables
-                elif not split_selected and table in selected_tables:
-                    selected_tables.remove(table)
-                    st.session_state.selected_split_tables[fold_name] = selected_tables
-            else:
-                table_cols[2].empty()
-    
+            st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown("---")
     
     # Global Confirm Merge: if merge mode is active and more than one fold is selected.
     if st.session_state.merge_mode and len(st.session_state.selected_folds) > 1:
-        merge_confirm_cols = st.columns([4, 1, 1])
-        if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge"):
+        if st.button("Confirm Merge", key="confirm_merge"):
             target_fold = st.session_state.selected_folds[0]
             for fold in st.session_state.selected_folds[1:]:
                 for table in domain_folds.get(fold, []):
                     st.session_state.table_locations[table] = target_fold
             st.session_state.selected_folds = []
             st.session_state.merge_mode = False
-            st.rerun()
+            st.session_state.active_action = None
         st.markdown("---")
     
     # Global Confirm Split: if split mode is active and at least one table is selected.
     if st.session_state.global_split_mode:
         any_split = any(st.session_state.selected_split_tables.get(fold, []) for fold in st.session_state.selected_split_tables)
         if any_split:
-            split_confirm_cols = st.columns([4, 1, 1])
-            if split_confirm_cols[2].button("Confirm Split", key="confirm_split"):
+            if st.button("Confirm Split", key="confirm_split"):
                 for fold_name, selected_tables in st.session_state.selected_split_tables.items():
                     if selected_tables:
                         tables_in_fold = domain_folds.get(fold_name, [])
@@ -205,7 +281,7 @@ if st.session_state.get("run_folding"):
                                 st.session_state.table_locations[t] = new_fold_name
                 st.session_state.global_split_mode = False
                 st.session_state.selected_split_tables = {}
-                st.rerun()
+                st.session_state.active_action = None
             st.markdown("---")
     
     # Button to save the current domain fold structure to the pipeline's configurations.json file.
