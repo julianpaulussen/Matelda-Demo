@@ -13,17 +13,38 @@ st.title("Domain Based Folding")
 st.markdown(
     """
     <style>
-        [data-testid="stSidebarNav"] {display: none;}
-        /* Keep columns from wrapping on small screens */
-        @media (max-width: 768px) {
-            div[data-testid="stHorizontalBlock"] {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-            }
-            div[data-testid="stHorizontalBlock"] > div {
-                min-width: 120px;
-            }
+      /* 1) Always hide the sidebar nav */
+      [data-testid="stSidebarNav"] {
+        display: none !important;
+      }
+
+      /* 2) Never wrap columns – always scroll if they overflow */
+      [data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+      }
+      [data-testid="stHorizontalBlock"] > div {
+        /* strip only padding & margin on every column, but keep default min-width */
+        padding: 0 !important;
+      }
+
+      /* 3) Let tables & checkboxes flow, but don’t force them smaller on desktop */
+      [data-testid="stTable"],
+      [data-testid="stCheckbox"] > div {
+        flex: 0 0 auto !important;
+      }
+
+      /* 4) Mobile phones only: remove Streamlit’s min-width floors */
+      @media (max-width: 768px) {
+        .block-container {
+          min-width: 0 !important;
         }
+        [data-testid="stHorizontalBlock"] > div,
+        [data-testid="stTable"],
+        [data-testid="stCheckbox"] > div {
+          min-width: 0 !important;
+        }
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -153,46 +174,13 @@ if st.session_state.get("run_folding"):
             icon="ℹ️",
         )
 
-    st.markdown(
-        """
-        <style>
-        div.action-container div[data-testid="stHorizontalBlock"] {
-            gap:0 !important;
-        }
-        div.action-container div[data-testid="column"] {
-            padding:0 !important;
-        }
-        div.action-container button {
-            margin:0 !important;
-        }
-        div[data-testid="baseButton-primary"] > button {
-            background-color: #ff4b4b;
-            color: white;
-        }
-        div.fold-row div[data-testid="stHorizontalBlock"],
-        div.table-row div[data-testid="stHorizontalBlock"] {
-            gap:0 !important;
-        }
-        div.fold-row div[data-testid="column"],
-        div.table-row div[data-testid="column"] {
-            padding:0 !important;
-        }
-        div.fold-row [data-testid="stCheckbox"],
-        div.table-row [data-testid="stCheckbox"] {
-            margin:0 !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
     st.markdown("---")
     st.markdown("### Fold / Table")
     
     # Iterate over each fold and display the tables
     for fold_name, tables in domain_folds.items():
         st.markdown('<div class="fold-row">', unsafe_allow_html=True)
-        fold_cols = st.columns([0.03, 0.97])
+        fold_cols = st.columns([0.03, 0.97], border=True)
         if st.session_state.merge_mode:
             merge_selected = fold_cols[0].checkbox(
                 f"Select fold {fold_name}",
@@ -211,7 +199,7 @@ if st.session_state.get("run_folding"):
         # Display each table within the fold
         for table in tables:
             st.markdown('<div class="table-row">', unsafe_allow_html=True)
-            table_cols = st.columns([0.03, 0.97])
+            table_cols = st.columns([0.03, 0.97], border=True)
             if st.session_state.global_split_mode:
                 split_selected = table_cols[0].checkbox(
                     f"Select table {table}",
