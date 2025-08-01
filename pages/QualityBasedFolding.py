@@ -11,10 +11,9 @@ from components import render_sidebar, apply_base_styles, apply_folding_styles, 
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
 st.title("Quality Based Folding")
 
-# Apply base styles
+# Apply styles
 apply_base_styles()
-# Apply base styles
-apply_base_styles()
+apply_folding_styles()
 
 # Sidebar navigation
 render_sidebar()
@@ -137,7 +136,6 @@ st.markdown("---")
 all_folds = []
 fold_to_domain = {}
 for dom, folds in st.session_state.cell_folds.items():
-
     for fname in folds:
         all_folds.append(fname)
         fold_to_domain[fname] = dom
@@ -179,6 +177,11 @@ def show_cell_dialog(cell, fold_name):
             st.session_state.cell_folds[old_dom][fold_name].remove(cell)
             st.session_state.cell_folds[new_dom][new_loc].append(cell)
 
+            if not st.session_state.cell_folds[old_dom][fold_name]:
+                del st.session_state.cell_folds[old_dom][fold_name]
+                if not st.session_state.cell_folds[old_dom]:
+                    del st.session_state.cell_folds[old_dom]
+
             if "pipeline_path" in st.session_state:
                 cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
                 with open(cfg_path, "r") as f:
@@ -193,38 +196,42 @@ def show_cell_dialog(cell, fold_name):
 
     _dialog()
 
-
-# Controls header
-header_cols = st.columns([4, 1, 1, 1])  # Added one more column
-header_cols[0].markdown("**Fold / Cell**")
-if header_cols[1].button("Merge Folds", key="global_merge_button"):
+st.markdown("### Options / Actions")
+st.markdown('<div class="action-container">', unsafe_allow_html=True)
+action_cols = st.columns(3)
+if action_cols[0].button("Merge Folds", key="global_merge_button", use_container_width=True):
     st.info("Merge Folds: Combine multiple cell folds into one. Select the folds you wish to merge, and all cells from those folds will be grouped under a single fold.", icon="ℹ️")
     st.session_state.merge_mode = True
     st.session_state.split_mode = False
     st.session_state.bulk_annotate_mode = False
     st.session_state.selected_folds_for_merge = []
     st.session_state.selected_cells_for_split = {}
-if header_cols[2].button("Split Folds", key="global_split_button"):
+if action_cols[1].button("Split Folds", key="global_split_button", use_container_width=True):
     st.info("Split Folds: Divide a cell fold into separate folds. Choose the cells at which you want the split to occur; the folds will be split immediately below the selected cells, separating the cells into multiple groups.", icon="ℹ️")
     st.session_state.split_mode = True
     st.session_state.merge_mode = False
     st.session_state.bulk_annotate_mode = False
     st.session_state.selected_folds_for_merge = []
     st.session_state.selected_cells_for_split = {}
-if header_cols[3].button("Bulk Annotate", key="global_bulk_annotate_button"):
+if action_cols[2].button("Bulk Annotate", key="global_bulk_annotate_button", use_container_width=True):
     st.info("Bulk Annotate: Label multiple cell folds at once as correct or incorrect. These labels will be used for error detection.", icon="ℹ️")
     st.session_state.bulk_annotate_mode = True
     st.session_state.merge_mode = False
     st.session_state.split_mode = False
     st.session_state.selected_folds_for_merge = []
     st.session_state.selected_cells_for_split = {}
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("---")
+st.markdown("### Folds / Tables")
 
 # Display folds
+header_cols = st.columns([4, 1])
+header_cols[0].markdown("**Fold / Cell**")
+header_cols[1].markdown("**Select**")
+
 for dom, folds in st.session_state.cell_folds.items():
     for fname, cell_list in folds.items():
-        # Get the label for this fold if it exists
         fold_label = None
         if "pipeline_path" in st.session_state:
             cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
@@ -232,29 +239,26 @@ for dom, folds in st.session_state.cell_folds.items():
                 with open(cfg_path) as f:
                     cfg = json.load(f)
                 fold_label = cfg.get("cell_fold_labels", {}).get(fname, "neutral")
-        
-        # Set color based on label
+
         label_color = {
             "correct": "green",
             "false": "red",
-            "neutral": None  # No color for neutral, will use default
+            "neutral": None
         }.get(fold_label)
-        
-        fold_cols = st.columns([4, 1, 1])
-        # Only add color styling if there is a non-neutral label
+
+        fold_cols = st.columns([4, 1])
         if label_color:
             fold_cols[0].markdown(f'📦 **<span style="color: {label_color}">{fname}</span>**', unsafe_allow_html=True)
         else:
             fold_cols[0].markdown(f"📦 **{fname}**")
-        
+
         if st.session_state.merge_mode:
-            merge_selected = fold_cols[1].checkbox("Merge", key=f"merge_{fname}", label_visibility="hidden")
+            merge_selected = fold_cols[1].checkbox("Select fold", key=f"merge_{fname}", label_visibility="hidden")
             if merge_selected and fname not in st.session_state.selected_folds_for_merge:
                 st.session_state.selected_folds_for_merge.append(fname)
             elif not merge_selected and fname in st.session_state.selected_folds_for_merge:
                 st.session_state.selected_folds_for_merge.remove(fname)
         elif st.session_state.bulk_annotate_mode:
-            # Add Correct/False buttons for bulk annotation
             button_cols = fold_cols[1].columns(2)
             if button_cols[0].button("✓", key=f"correct_{fname}"):
                 if "pipeline_path" in st.session_state:
@@ -282,18 +286,16 @@ for dom, folds in st.session_state.cell_folds.items():
                         st.rerun()
         else:
             fold_cols[1].empty()
-        fold_cols[2].empty()
 
         for cell_idx, cell in enumerate(cell_list):
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
-            cell_cols = st.columns([4, 1, 1])
+            cell_cols = st.columns([4, 1])
             with cell_cols[0]:
                 if st.button(lbl, key=f"cell_{fname}_{tbl}_{r}_{c}_{cell_idx}"):
                     show_cell_dialog(cell, fname)
-            cell_cols[1].empty()
             if st.session_state.split_mode:
-                split_selected = cell_cols[2].checkbox("Split here", key=f"split_{fname}_{tbl}_{r}_{c}_{cell_idx}", label_visibility="hidden")
+                split_selected = cell_cols[1].checkbox("Split here", key=f"split_{fname}_{tbl}_{r}_{c}_{cell_idx}", label_visibility="hidden")
                 if fname not in st.session_state.selected_cells_for_split:
                     st.session_state.selected_cells_for_split[fname] = []
                 selected_cells = st.session_state.selected_cells_for_split.get(fname, [])
@@ -304,14 +306,14 @@ for dom, folds in st.session_state.cell_folds.items():
                     selected_cells.remove(cell)
                     st.session_state.selected_cells_for_split[fname] = selected_cells
             else:
-                cell_cols[2].empty()
+                cell_cols[1].empty()
 
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
 if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge) > 1:
     st.markdown("---")
-    merge_confirm_cols = st.columns([4, 1, 1])
-    if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge"):
+    merge_confirm_cols = st.columns([4, 1])
+    if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge", use_container_width=True):
         target_fold = st.session_state.selected_folds_for_merge[0]
         target_domain = fold_to_domain[target_fold]
         
@@ -371,8 +373,8 @@ if st.session_state.split_mode:
     any_split = any(st.session_state.selected_cells_for_split.get(fold, []) for fold in st.session_state.selected_cells_for_split)
     if any_split:
         st.markdown("---")
-        split_confirm_cols = st.columns([4, 1, 1])
-        if split_confirm_cols[2].button("Confirm Split", key="confirm_split"):
+        split_confirm_cols = st.columns([4, 1])
+        if split_confirm_cols[1].button("Confirm Split", key="confirm_split", use_container_width=True):
             for fold_name, selected_cells in st.session_state.selected_cells_for_split.items():
                 if selected_cells:
                     domain = fold_to_domain[fold_name]
@@ -416,7 +418,4 @@ if st.button("💾 Save Cell Folds and Continue", key="save_cell_folds"):
         st.success("✅ Saved.")
     else:
         st.warning("⚠️ No pipeline path set.")
-
-# Next page button
-# if st.button("Next", key="next_page"):
     st.switch_page("pages/Labeling.py")

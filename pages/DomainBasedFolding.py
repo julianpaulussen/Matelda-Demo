@@ -4,41 +4,16 @@ import os
 import time
 import json
 from backend import backend_dbf
+from components import render_sidebar, apply_base_styles, apply_folding_styles
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
 st.title("Domain Based Folding")
 
-# Hide default Streamlit menu
-st.markdown(
-    """
-    <style>
-        [data-testid="stSidebarNav"] {display: none;}
-        /* Keep columns from wrapping on small screens */
-        @media (max-width: 768px) {
-            div[data-testid="stHorizontalBlock"] {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-            }
-            div[data-testid="stHorizontalBlock"] > div {
-                min-width: 120px;
-            }
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# Sidebar navigation
-with st.sidebar:
-    st.page_link("app.py", label="Matelda")
-    st.page_link("pages/Configurations.py", label="Configurations")
-    st.page_link("pages/DomainBasedFolding.py", label="Domain Based Folding")
-    st.page_link("pages/QualityBasedFolding.py", label="Quality Based Folding")
-    st.page_link("pages/Labeling.py", label="Labeling")
-    st.page_link("pages/PropagatedErrors.py", label="Propagated Errors")
-    st.page_link("pages/ErrorDetection.py", label="Error Detection")
-    st.page_link("pages/Results.py", label="Results")
+# Apply global styles and sidebar
+apply_base_styles()
+apply_folding_styles()
+render_sidebar()
 
 # 🔄 Load dataset from pipeline config if not already in session_state
 # Load the dataset from the pipeline configuration if available
@@ -112,43 +87,47 @@ if st.button("▶️ Run Domain Based Folding"):
 
 if st.session_state.get("run_folding"):
     st.markdown("---")
-    
+    st.markdown("### Options / Actions")
+    st.markdown('<div class="action-container">', unsafe_allow_html=True)
+    action_cols = st.columns(2)
+    if action_cols[0].button("Merge Folds", key="global_merge_button", use_container_width=True):
+        st.info("Merge Folds: Combine multiple domain folds into one. Select the folds you wish to merge, and all tables from those folds will be grouped under a single fold.", icon="ℹ️")
+        st.session_state.merge_mode = True
+        st.session_state.global_split_mode = False
+        st.session_state.selected_folds = []
+    if action_cols[1].button("Split Folds", key="global_split_button", use_container_width=True):
+        st.info("Split Folds: Divide a domain fold into separate folds. Choose the tables at which you want the split to occur; the folds will be split immediately below the selected tables, separating the tables into multiple groups.", icon="ℹ️")
+        st.session_state.global_split_mode = True
+        st.session_state.merge_mode = False
+        st.session_state.selected_split_tables = {}
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("### Folds / Tables")
+
     # Group tables by their assigned fold
     domain_folds = {}
     for table, fold in st.session_state.table_locations.items():
         domain_folds.setdefault(fold, []).append(table)
-    
-    # HEADER: Global action buttons for merging and splitting folds
-    header_cols = st.columns([4, 1, 1])
+
+    header_cols = st.columns([4, 1])
     header_cols[0].markdown("**Fold / Table**")
-    if header_cols[1].button("Merge Folds", key="global_merge_button"):
-        st.info("Merge Folds: Combine multiple domain folds into one. Select the folds you wish to merge, and all tables from those folds will be grouped under a single fold.", icon="ℹ️")
-        st.session_state.merge_mode = True
-        st.session_state.selected_folds = []
-    if header_cols[2].button("Split Folds", key="global_split_button"):
-        st.info("Split Folds: Divide a domain fold into separate folds. Choose the tables at which you want the split to occur; the folds will be split immediately below the selected tables, separating the tables into multiple groups.", icon="ℹ️")
-        st.session_state.global_split_mode = True
-        st.session_state.selected_split_tables = {}
-    
-    st.markdown("---")
-    
-    # Iterate over each fold and display the tables
+    header_cols[1].markdown("**Select**")
+
     for fold_name, tables in domain_folds.items():
-        fold_cols = st.columns([4, 1, 1])
+        fold_cols = st.columns([4, 1])
         fold_cols[0].markdown(f"**{fold_name}**")
         if st.session_state.merge_mode:
-            merge_selected = fold_cols[1].checkbox("Merge", key=f"merge_{fold_name}", label_visibility="hidden")
+            merge_selected = fold_cols[1].checkbox("Select fold", key=f"merge_{fold_name}", label_visibility="hidden")
             if merge_selected and fold_name not in st.session_state.selected_folds:
                 st.session_state.selected_folds.append(fold_name)
             elif not merge_selected and fold_name in st.session_state.selected_folds:
                 st.session_state.selected_folds.remove(fold_name)
         else:
             fold_cols[1].empty()
-        fold_cols[2].empty()
-        
-        # Display each table within the fold
+
         for table in tables:
-            table_cols = st.columns([4, 1, 1])
+            table_cols = st.columns([4, 1])
             with table_cols[0].expander(f"📊 {table}"):
                 df = load_clean_table(table)
                 st.dataframe(df)
@@ -161,9 +140,8 @@ if st.session_state.get("run_folding"):
                 if new_location != st.session_state.table_locations[table]:
                     st.session_state.table_locations[table] = new_location
                     st.rerun()
-            table_cols[1].empty()
             if st.session_state.global_split_mode:
-                split_selected = table_cols[2].checkbox("Split here", key=f"split_{fold_name}_{table}", label_visibility="hidden")
+                split_selected = table_cols[1].checkbox("Select table", key=f"split_{fold_name}_{table}", label_visibility="hidden")
                 if fold_name not in st.session_state.selected_split_tables:
                     st.session_state.selected_split_tables[fold_name] = []
                 selected_tables = st.session_state.selected_split_tables[fold_name]
@@ -174,14 +152,14 @@ if st.session_state.get("run_folding"):
                     selected_tables.remove(table)
                     st.session_state.selected_split_tables[fold_name] = selected_tables
             else:
-                table_cols[2].empty()
-    
+                table_cols[1].empty()
+
     st.markdown("---")
-    
+
     # Global Confirm Merge: if merge mode is active and more than one fold is selected.
     if st.session_state.merge_mode and len(st.session_state.selected_folds) > 1:
-        merge_confirm_cols = st.columns([4, 1, 1])
-        if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge"):
+        merge_confirm_cols = st.columns([4, 1])
+        if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge", use_container_width=True):
             target_fold = st.session_state.selected_folds[0]
             for fold in st.session_state.selected_folds[1:]:
                 for table in domain_folds.get(fold, []):
@@ -190,13 +168,13 @@ if st.session_state.get("run_folding"):
             st.session_state.merge_mode = False
             st.rerun()
         st.markdown("---")
-    
+
     # Global Confirm Split: if split mode is active and at least one table is selected.
     if st.session_state.global_split_mode:
         any_split = any(st.session_state.selected_split_tables.get(fold, []) for fold in st.session_state.selected_split_tables)
         if any_split:
-            split_confirm_cols = st.columns([4, 1, 1])
-            if split_confirm_cols[2].button("Confirm Split", key="confirm_split"):
+            split_confirm_cols = st.columns([4, 1])
+            if split_confirm_cols[1].button("Confirm Split", key="confirm_split", use_container_width=True):
                 for fold_name, selected_tables in st.session_state.selected_split_tables.items():
                     if selected_tables:
                         tables_in_fold = domain_folds.get(fold_name, [])
@@ -217,7 +195,7 @@ if st.session_state.get("run_folding"):
                 st.session_state.selected_split_tables = {}
                 st.rerun()
             st.markdown("---")
-    
+
     # Button to save the current domain fold structure to the pipeline's configurations.json file.
     if st.button("Save Domain Folds and Continue"):
         if "pipeline_path" in st.session_state:
@@ -236,6 +214,4 @@ if st.session_state.get("run_folding"):
             st.success("Domain folds saved to pipeline configurations!")
         else:
             st.warning("No pipeline selected; domain folds not saved.")
-    
-    #if st.button("Next"):
         st.switch_page("pages/QualityBasedFolding.py")
