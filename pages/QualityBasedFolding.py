@@ -14,17 +14,38 @@ st.title("Quality Based Folding")
 st.markdown(
     """
     <style>
-        [data-testid=\"stSidebarNav\"] {display: none;}
-        /* Keep columns from wrapping on small screens */
-        @media (max-width: 768px) {
-            div[data-testid=\"stHorizontalBlock\"] {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-            }
-            div[data-testid=\"stHorizontalBlock\"] > div {
-                min-width: 120px;
-            }
+      /* 1) Always hide the sidebar nav */
+      [data-testid="stSidebarNav"] {
+        display: none !important;
+      }
+
+      /* 2) Never wrap columns – always scroll if they overflow */
+      [data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+      }
+      [data-testid="stHorizontalBlock"] > div {
+        /* strip only padding & margin on every column, but keep default min-width */
+        padding: 0 !important;
+      }
+
+      /* 3) Let tables & checkboxes flow, but don’t force them smaller on desktop */
+      [data-testid="stTable"],
+      [data-testid="stCheckbox"] > div {
+        flex: 0 0 auto !important;
+      }
+
+      /* 4) Mobile phones only: remove Streamlit’s min-width floors */
+      @media (max-width: 768px) {
+        .block-container {
+          min-width: 0 !important;
         }
+        [data-testid="stHorizontalBlock"] > div,
+        [data-testid="stTable"],
+        [data-testid="stCheckbox"] > div {
+          min-width: 0 !important;
+        }
+      }
     </style>
     """,
     unsafe_allow_html=True,
