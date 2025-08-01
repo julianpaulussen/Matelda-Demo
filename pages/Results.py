@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import os
 import json
@@ -217,5 +218,19 @@ if dataset_configured and st.button("Share Result"):
         f"F1: {f1_score:.2f}, Precision: {precision_score:.2f}"
     )
     st.code(share_text)
+    share_js = f"""
+    <script>
+    const text = {json.dumps(share_text)};
+    if (navigator.share) {{
+        navigator.share({{ text }})
+            .catch(err => console.log('Share failed', err));
+    }} else {{
+        navigator.clipboard.writeText(text).then(() => {{
+            alert('Share text copied to clipboard');
+        }}).catch(err => console.log('Copy failed', err));
+    }}
+    </script>
+    """
+    components.html(share_js, height=0)
 
 st.balloons()
