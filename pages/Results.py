@@ -49,12 +49,6 @@ else:
     st.stop()
 
 col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(label="Recall", value=f"{recall_score:.2f}")
-with col2:
-    st.metric(label="F1 Score", value=f"{f1_score:.2f}")
-with col3:
-    st.metric(label="Precision", value=f"{precision_score:.2f}")
 
 # -----------------------------------------------------------------------------
 # Ensure that the current dataset is defined in session state.
@@ -66,78 +60,91 @@ if not current_dataset and "pipeline_path" in st.session_state:
     if current_dataset:
         st.session_state.dataset_select = current_dataset
 
-if not current_dataset:
-    st.warning("No dataset defined in session state.")
-    st.stop()
+dataset_configured = current_dataset is not None
+
+if dataset_configured:
+    with col1:
+        st.metric(label="Recall", value=f"{recall_score:.2f}")
+    with col2:
+        st.metric(label="F1 Score", value=f"{f1_score:.2f}")
+    with col3:
+        st.metric(label="Precision", value=f"{precision_score:.2f}")
+else:
+    with col1:
+        st.warning("⚠️ Dataset not configured.")
+        if st.button("Go back to Configurations"):
+            st.switch_page("pages/Configurations.py")
+    col2.empty()
+    col3.empty()
 
 current_pipeline_name = os.path.basename(current_pipeline_path)
 pipelines_folder = os.path.join(os.path.dirname(__file__), "../pipelines")
 
-same_dataset_rows = []
-for pipeline in os.listdir(pipelines_folder):
-    pipeline_dir = os.path.join(pipelines_folder, pipeline)
-    if os.path.isdir(pipeline_dir):
-        cfg = load_config(os.path.join(pipeline_dir, "configurations.json"))
-        if cfg.get("selected_dataset") == current_dataset:
-            labeling_budget = cfg.get("labeling_budget", "")
-            results_list = cfg.get("results", [])
-            for res in results_list:
-                metrics = res.get("metrics", {})
-                row = {
-                    "Time": res.get("Time", ""),
-                    "Pipeline Name": pipeline,
-                    "Labeling Budget": labeling_budget,
-                    "Recall": metrics.get("Recall", ""),
-                    "F1": metrics.get("F1", ""),
-                    "Precision": metrics.get("Precision", "")
-                }
-                same_dataset_rows.append(row)
+if dataset_configured:
+    same_dataset_rows = []
+    for pipeline in os.listdir(pipelines_folder):
+        pipeline_dir = os.path.join(pipelines_folder, pipeline)
+        if os.path.isdir(pipeline_dir):
+            cfg = load_config(os.path.join(pipeline_dir, "configurations.json"))
+            if cfg.get("selected_dataset") == current_dataset:
+                labeling_budget = cfg.get("labeling_budget", "")
+                results_list = cfg.get("results", [])
+                for res in results_list:
+                    metrics = res.get("metrics", {})
+                    row = {
+                        "Time": res.get("Time", ""),
+                        "Pipeline Name": pipeline,
+                        "Labeling Budget": labeling_budget,
+                        "Recall": metrics.get("Recall", ""),
+                        "F1": metrics.get("F1", ""),
+                        "Precision": metrics.get("Precision", "")
+                    }
+                    same_dataset_rows.append(row)
 
-found_current = any(
-    row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time
-    for row in same_dataset_rows
-)
-if not found_current:
-    current_cfg = load_config(os.path.join(current_pipeline_path, "configurations.json"))
-    current_labeling_budget = current_cfg.get("labeling_budget", "")
-    current_row = {
-        "Time": current_time,
-        "Pipeline Name": current_pipeline_name,
-        "Labeling Budget": current_labeling_budget,
-        "Recall": recall_score,
-        "F1": f1_score,
-        "Precision": precision_score
-    }
-    # Remove duplicates for today from same pipeline
-    same_dataset_rows = [
-        r for r in same_dataset_rows
-        if not (r["Pipeline Name"] == current_pipeline_name and r["Time"].split(" ")[0] == current_time.split(" ")[0])
-    ]
-    same_dataset_rows.append(current_row)
+    found_current = any(
+        row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time
+        for row in same_dataset_rows
+    )
+    if not found_current:
+        current_cfg = load_config(os.path.join(current_pipeline_path, "configurations.json"))
+        current_labeling_budget = current_cfg.get("labeling_budget", "")
+        current_row = {
+            "Time": current_time,
+            "Pipeline Name": current_pipeline_name,
+            "Labeling Budget": current_labeling_budget,
+            "Recall": recall_score,
+            "F1": f1_score,
+            "Precision": precision_score
+        }
+        same_dataset_rows = [
+            r for r in same_dataset_rows
+            if not (r["Pipeline Name"] == current_pipeline_name and r["Time"].split(" ")[0] == current_time.split(" ")[0])
+        ]
+        same_dataset_rows.append(current_row)
 
-same_dataset_df = pd.DataFrame(same_dataset_rows)
-for col in ["Recall", "F1", "Precision", "Labeling Budget"]:
-    if col in same_dataset_df.columns:
-        same_dataset_df[col] = pd.to_numeric(same_dataset_df[col], errors="coerce").round(2)
-same_dataset_df = same_dataset_df.sort_values(by="Time", ascending=False)
+    same_dataset_df = pd.DataFrame(same_dataset_rows)
+    for col in ["Recall", "F1", "Precision", "Labeling Budget"]:
+        if col in same_dataset_df.columns:
+            same_dataset_df[col] = pd.to_numeric(same_dataset_df[col], errors="coerce").round(2)
+    same_dataset_df = same_dataset_df.sort_values(by="Time", ascending=False)
 
-def highlight_current(row):
-    if row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time:
-        return ['background-color: red'] * len(row)
-    else:
-        return [''] * len(row)
+    def highlight_current(row):
+        if row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time:
+            return ['background-color: red'] * len(row)
+        else:
+            return [''] * len(row)
 
-styled_same_dataset_df = same_dataset_df.style.apply(highlight_current, axis=1).format({
-    "Recall": "{:.2f}",
-    "F1": "{:.2f}",
-    "Precision": "{:.2f}",
-    "Labeling Budget": "{:}"
-})
+    styled_same_dataset_df = same_dataset_df.style.apply(highlight_current, axis=1).format({
+        "Recall": "{:.2f}",
+        "F1": "{:.2f}",
+        "Precision": "{:.2f}",
+        "Labeling Budget": "{:}"
+    })
 
-st.markdown("---")
-st.markdown(f"#### Result Comparison (Dataset: {current_dataset}):")
-st.write("_(Click on column headers to sort the table.)_")
-st.dataframe(styled_same_dataset_df)
+    st.markdown("---")
+    st.markdown(f"#### Result Comparison (Dataset: {current_dataset}):")
+    st.write("_(Click on column headers to sort the table.)_")
+    st.dataframe(styled_same_dataset_df)
 
 # ---------------- ALL DATASETS ----------------
 all_rows = []
@@ -203,8 +210,8 @@ st.dataframe(styled_all_df)
 
 
 st.markdown("---")
-# Share Result button with additional share options
-if st.button("Share Result"):
+# Share Result button with additional share options (only if dataset is configured)
+if dataset_configured and st.button("Share Result"):
     share_text = (
         f"Check out my Matelda results! Recall: {recall_score:.2f}, "
         f"F1: {f1_score:.2f}, Precision: {precision_score:.2f}"

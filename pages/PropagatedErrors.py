@@ -12,10 +12,37 @@ apply_base_styles()
 # Sidebar navigation
 render_sidebar()
 
+# Title
 st.title("Propagated Errors")
 
+# ---------------------------------------------------------------------------
+# Ensure dataset is configured before checking propagation results
+# ---------------------------------------------------------------------------
+# Attempt to load dataset from pipeline configuration if needed
+if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        with open(cfg_path) as f:
+            cfg = json.load(f)
+        selected = cfg.get("selected_dataset")
+        if selected:
+            st.session_state.dataset_select = selected
+
+# If no dataset is available, direct the user back to Configurations
+if "dataset_select" not in st.session_state:
+    st.warning("⚠️ Dataset not configured.")
+    if st.button("Go back to Configurations"):
+        st.switch_page("pages/Configurations.py")
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# If dataset is configured but no propagation results exist, guide user back to
+# labeling instead of showing an error
+# ---------------------------------------------------------------------------
 if "propagation_results" not in st.session_state:
-    st.error("No propagation results available. Please run labeling first.")
+    st.warning("No propagation results available. Please label the provided cells")
+    if st.button("Go back to Labeling"):
+        st.switch_page("pages/Labeling.py")
     st.stop()
 
 propagation_results = st.session_state.propagation_results

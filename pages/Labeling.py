@@ -19,15 +19,21 @@ apply_base_styles()
 render_sidebar()
 
 # Load dataset from pipeline config if not already in session_state
+# Load dataset from pipeline configuration if available
 if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     if os.path.exists(cfg_path):
         with open(cfg_path) as f:
             cfg = json.load(f)
-        st.session_state.dataset_select = cfg.get("selected_dataset")
+        selected = cfg.get("selected_dataset")
+        if selected:
+            st.session_state.dataset_select = selected
 
+# If dataset remains undefined, warn user and provide a navigation button
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Please configure a dataset first.")
+    st.warning("⚠️ Dataset not configured.")
+    if st.button("Go back to Configurations"):
+        st.switch_page("pages/Configurations.py")
     st.stop()
 
 dataset = st.session_state.dataset_select
@@ -57,8 +63,6 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
 
 if "run_quality_folding" not in st.session_state:
     st.session_state.run_quality_folding = False
-
-st.title("Labeling")
 
 if not st.session_state.run_quality_folding:
     if st.button("Run Labeling"):

@@ -42,15 +42,21 @@ def _json_default(obj):
     raise TypeError(f"Type {obj.__class__.__name__} not serializable")
 
 # Load selected dataset
+# Load selected dataset from pipeline configuration if available
 if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     if os.path.exists(cfg_path):
         with open(cfg_path) as f:
             cfg = json.load(f)
-        st.session_state.dataset_select = cfg.get("selected_dataset")
+        selected = cfg.get("selected_dataset")
+        if selected:
+            st.session_state.dataset_select = selected
 
+# If dataset is still not configured, inform the user and provide navigation
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Please configure a dataset first.")
+    st.warning("⚠️ Dataset not configured.")
+    if st.button("Go back to Configurations"):
+        st.switch_page("pages/Configurations.py")
     st.stop()
 
 # Paths
