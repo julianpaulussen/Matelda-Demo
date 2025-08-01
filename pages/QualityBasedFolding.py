@@ -351,21 +351,6 @@ st.markdown(
         margin: 0 !important;
         padding: 0 !important;
     }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        div.fold-row div[data-testid="column"]:first-child,
-        div.cell-row div[data-testid="column"]:first-child {
-            flex: 0 0 18px !important;
-            max-width: 18px !important;
-        }
-        
-        div.fold-row div[data-testid="stCheckbox"] input[type="checkbox"],
-        div.cell-row div[data-testid="stCheckbox"] input[type="checkbox"] {
-            width: 14px !important;
-            height: 14px !important;
-        }
-    }
     </style>
     """,
     unsafe_allow_html=True,

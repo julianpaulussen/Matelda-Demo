@@ -227,21 +227,6 @@ if st.session_state.get("run_folding"):
             margin: 0 !important;
             padding: 0 !important;
         }
-        
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            div.fold-row div[data-testid="column"]:first-child,
-            div.table-row div[data-testid="column"]:first-child {
-                flex: 0 0 18px !important;
-                max-width: 18px !important;
-            }
-            
-            div.fold-row div[data-testid="stCheckbox"] input[type="checkbox"],
-            div.table-row div[data-testid="stCheckbox"] input[type="checkbox"] {
-                width: 14px !important;
-                height: 14px !important;
-            }
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -252,24 +237,17 @@ if st.session_state.get("run_folding"):
     
     # Iterate over each fold and display the tables
     for fold_name, tables in domain_folds.items():
-        st.markdown('<div class="fold-row">', unsafe_allow_html=True)
-        fold_cols = st.columns([0.02, 0.98])
-        if st.session_state.merge_mode:
-            merge_selected = fold_cols[0].checkbox(
-                f"Select fold {fold_name}",
-                key=f"merge_{fold_name}",
-                label_visibility="collapsed",
-            )
-            if merge_selected and fold_name not in st.session_state.selected_folds:
-                st.session_state.selected_folds.append(fold_name)
-            elif not merge_selected and fold_name in st.session_state.selected_folds:
-                st.session_state.selected_folds.remove(fold_name)
-        else:
-            fold_cols[0].empty()
-        fold_cols[1].markdown(f"**{fold_name}**")
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Custom HTML/CSS for checkbox and fold name to fix mobile gap issue
+        st.markdown(f'''
+        <div class="custom-fold-row">
+            <form method="post">
+                <input type="checkbox" id="merge_{fold_name}" name="merge_{fold_name}" {'checked' if fold_name in st.session_state.selected_folds else ''} onchange="window.location.reload()" style="vertical-align: middle; margin-right: 8px; width: 18px; height: 18px;" {'hidden' if not st.session_state.merge_mode else ''}>
+                <label for="merge_{fold_name}" style="font-weight: bold; vertical-align: middle;">{fold_name}</label>
+            </form>
+        </div>
+        ''', unsafe_allow_html=True)
 
-        # Display each table within the fold
+        # Display each table within the fold (keep using columns for tables, but you can apply similar custom HTML/CSS if needed)
         for table in tables:
             st.markdown('<div class="table-row">', unsafe_allow_html=True)
             table_cols = st.columns([0.02, 0.98])
@@ -305,6 +283,36 @@ if st.session_state.get("run_folding"):
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
+    # Add custom CSS for mobile-friendly checkbox/fold row
+    st.markdown('''
+    <style>
+    .custom-fold-row {
+        display: flex;
+        align-items: center;
+        padding: 4px 0;
+        min-height: 32px;
+        width: 100%;
+    }
+    .custom-fold-row input[type="checkbox"] {
+        margin-right: 8px;
+        width: 18px;
+        height: 18px;
+    }
+    .custom-fold-row label {
+        font-weight: bold;
+        vertical-align: middle;
+    }
+    @media (max-width: 768px) {
+        .custom-fold-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+        .custom-fold-row label {
+            font-size: 1.1em;
+        }
+    }
+    </style>
+    ''', unsafe_allow_html=True)
     st.markdown("---")
     
     # Global Confirm Merge: if merge mode is active and more than one fold is selected.
