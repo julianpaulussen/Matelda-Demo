@@ -66,7 +66,10 @@ def display_table_with_errors(table_name, error_cells):
         st.session_state[idx_key] = 0
 
     if not error_cells:
-        st.dataframe(df)
+        if AGGRID_AVAILABLE:
+            AgGrid(df, theme="streamlit", fit_columns_on_grid_load=True)
+        else:
+            st.dataframe(df)
         return
 
     # Build mapping from cell coordinates to color for highlighting
@@ -113,11 +116,20 @@ def display_table_with_errors(table_name, error_cells):
         grid_options = gb.build()
         grid_options["enableRangeSelection"] = True
         grid_options["suppressRowClickSelection"] = False
-        grid_options["onGridReady"] = JsCode(
+        grid_options["animateRows"] = True
+        grid_options["onFirstDataRendered"] = JsCode(
             f"""
             function(params) {{
-                params.api.setFocusedCell({current_error['row']}, '{current_error['col']}');
-                params.api.ensureIndexVisible({current_error['row']}, 'middle');
+                const row = {current_error['row']};
+                const col = '{current_error['col']}';
+                params.api.setFocusedCell(row, col);
+                setTimeout(function() {{
+                    const selector = `[row-index="${row}"] [col-id="${col}"]`;
+                    const cell = document.querySelector(selector);
+                    if(cell) {{
+                        cell.scrollIntoView({{behavior: 'smooth', block: 'center'}});
+                    }}
+                }}, 0);
             }}
             """
         )
@@ -127,6 +139,8 @@ def display_table_with_errors(table_name, error_cells):
             gridOptions=grid_options,
             update_mode=GridUpdateMode.SELECTION_CHANGED,
             allow_unsafe_jscode=True,
+            theme="streamlit",
+            fit_columns_on_grid_load=True,
         )
 
         # Update index when user clicks a highlighted cell
@@ -138,6 +152,7 @@ def display_table_with_errors(table_name, error_cells):
             for i, err in enumerate(error_cells):
                 if err["row"] == row_idx and err["col"] == col_id:
                     st.session_state[idx_key] = i
+                    st.experimental_rerun()
                     break
     else:
         # Fallback to standard dataframe rendering
