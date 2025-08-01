@@ -4,7 +4,14 @@ import json
 import pandas as pd
 import zipfile
 import shutil
-from components import render_sidebar, apply_base_styles, get_datasets_path, load_pipeline_config, save_pipeline_config
+from components import (
+    render_sidebar,
+    apply_base_styles,
+    get_datasets_path,
+    load_pipeline_config,
+    save_pipeline_config,
+    realtime_slider,
+)
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Configurations", layout="wide")
@@ -56,11 +63,6 @@ def load_pipeline_config_ui():
     st.session_state.preconfigured_dataset = pipeline_dataset
 
 
-def sync_slider_to_input():
-    """Keep the number input in sync when the slider changes."""
-    st.session_state.budget_input = st.session_state.budget_slider
-
-
 def sync_input_to_slider():
     """Keep the slider in sync when the number input changes."""
     st.session_state.budget_slider = st.session_state.budget_input
@@ -93,14 +95,16 @@ if pipeline_choice == "Use Existing Pipeline":
     col_slider, col_input = st.columns([3, 1])
 
     with col_slider:
-        st.slider(
-            "Select Labeling Budget:",
+        st.markdown("Select Labeling Budget:")
+        slider_val = realtime_slider(
+            key="budget_slider",
             min_value=1,
             max_value=100,
-            key="budget_slider",
-            label_visibility="visible",
-            on_change=sync_slider_to_input,
+            value=st.session_state.budget_slider,
         )
+        if slider_val is not None:
+            st.session_state.budget_slider = slider_val
+            st.session_state.budget_input = slider_val
 
     with col_input:
         st.number_input(
@@ -235,14 +239,16 @@ else:
     col_slider, col_input = st.columns([3, 1])
 
     with col_slider:
-        st.slider(
-            "Select Labeling Budget:",
+        st.markdown("Select Labeling Budget:")
+        slider_val = realtime_slider(
+            key="budget_slider",
             min_value=1,
             max_value=100,
-            key="budget_slider",
-            label_visibility="visible",
-            on_change=sync_slider_to_input,
+            value=st.session_state.budget_slider,
         )
+        if slider_val is not None:
+            st.session_state.budget_slider = slider_val
+            st.session_state.budget_input = slider_val
 
     with col_input:
         st.number_input(

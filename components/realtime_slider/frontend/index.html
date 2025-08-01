@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://unpkg.com/streamlit-component-lib@1.2.1/dist/index.js"></script>
+  </head>
+  <body>
+    <input id="slider" type="range" />
+    <script>
+      const slider = document.getElementById("slider");
+      slider.oninput = (e) => Streamlit.setComponentValue(parseFloat(e.target.value));
+
+      const render = (event) => {
+        const args = event.detail.args;
+        slider.min = args.min_value;
+        slider.max = args.max_value;
+        slider.value = args.value;
+        Streamlit.setFrameHeight(40);
+      };
+
+      Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, render);
+      Streamlit.setComponentReady();
+    </script>
+  </body>
+</html>

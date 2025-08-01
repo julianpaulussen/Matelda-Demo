@@ -8,6 +8,7 @@ from .utils import (
     save_pipeline_config,
     update_domain_folds_in_config
 )
+from .realtime_slider import realtime_slider
 
 __all__ = [
     'render_sidebar',
@@ -17,5 +18,6 @@ __all__ = [
     'load_clean_table',
     'load_pipeline_config',
     'save_pipeline_config',
-    'update_domain_folds_in_config'
+    'update_domain_folds_in_config',
+    'realtime_slider'
 ]
