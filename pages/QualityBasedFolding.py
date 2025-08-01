@@ -226,7 +226,9 @@ st.markdown("---")
 st.markdown("### Folds / Tables")
 
 # Display folds
-header_cols = st.columns([4, 1])
+# When bulk annotation is enabled we need more room for the two action buttons.
+action_col_width = 2 if st.session_state.bulk_annotate_mode else 1
+header_cols = st.columns([4, action_col_width])
 header_cols[0].markdown("**Fold / Cell**")
 header_cols[1].markdown("**Select**")
 
@@ -246,7 +248,7 @@ for dom, folds in st.session_state.cell_folds.items():
             "neutral": None
         }.get(fold_label)
 
-        fold_cols = st.columns([4, 1])
+        fold_cols = st.columns([4, action_col_width])
         if label_color:
             fold_cols[0].markdown(f'📦 **<span style="color: {label_color}">{fname}</span>**', unsafe_allow_html=True)
         else:
@@ -260,7 +262,7 @@ for dom, folds in st.session_state.cell_folds.items():
                 st.session_state.selected_folds_for_merge.remove(fname)
         elif st.session_state.bulk_annotate_mode:
             button_cols = fold_cols[1].columns(2)
-            if button_cols[0].button("✓", key=f"correct_{fname}"):
+            if button_cols[0].button("✓", key=f"correct_{fname}", use_container_width=True):
                 if "pipeline_path" in st.session_state:
                     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
                     if os.path.exists(cfg_path):
@@ -272,7 +274,7 @@ for dom, folds in st.session_state.cell_folds.items():
                         with open(cfg_path, "w") as f:
                             json.dump(cfg, f, indent=2, default=_json_default)
                         st.rerun()
-            if button_cols[1].button("✗", key=f"false_{fname}"):
+            if button_cols[1].button("✗", key=f"false_{fname}", use_container_width=True):
                 if "pipeline_path" in st.session_state:
                     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
                     if os.path.exists(cfg_path):
@@ -290,7 +292,7 @@ for dom, folds in st.session_state.cell_folds.items():
         for cell_idx, cell in enumerate(cell_list):
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
-            cell_cols = st.columns([4, 1])
+            cell_cols = st.columns([4, action_col_width])
             with cell_cols[0]:
                 if st.button(lbl, key=f"cell_{fname}_{tbl}_{r}_{c}_{cell_idx}"):
                     show_cell_dialog(cell, fname)
