@@ -58,8 +58,6 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
 if "run_quality_folding" not in st.session_state:
     st.session_state.run_quality_folding = False
 
-st.title("Labeling")
-
 if not st.session_state.run_quality_folding:
     if st.button("Run Labeling"):
         with st.spinner("🔄 Processing... Please wait..."):
