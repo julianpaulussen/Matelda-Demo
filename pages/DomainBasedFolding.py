@@ -41,14 +41,24 @@ with st.sidebar:
     st.page_link("pages/Results.py", label="Results")
 
 # 🔄 Load dataset from pipeline config if not already in session_state
+# Load the dataset from the pipeline configuration if available
 if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
     config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     if os.path.exists(config_path):
         with open(config_path) as f:
             config = json.load(f)
-        st.session_state["dataset_select"] = config.get("selected_dataset", "Demo")
+        selected = config.get("selected_dataset")
+        if selected:
+            st.session_state["dataset_select"] = selected
 
-selected_dataset = st.session_state.get("dataset_select", "Demo")
+# If we still don't have a dataset configured, show a warning and redirect option
+if "dataset_select" not in st.session_state:
+    st.warning("⚠️ Dataset not configured.")
+    if st.button("Go back to Configurations"):
+        st.switch_page("pages/Configurations.py")
+    st.stop()
+
+selected_dataset = st.session_state.dataset_select
 # Use absolute path for datasets
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 datasets_path = os.path.join(root_dir, "datasets", selected_dataset)

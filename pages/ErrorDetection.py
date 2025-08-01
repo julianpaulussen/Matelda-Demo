@@ -27,24 +27,26 @@ with st.sidebar:
     st.page_link("pages/ErrorDetection.py", label="Error Detection")
     st.page_link("pages/Results.py", label="Results")
 
-# Load configuration and dataset path
-if "pipeline_path" not in st.session_state:
-    st.error("No pipeline selected!")
+# ---------------------------------------------------------------------------
+# Determine the selected dataset, loading from the pipeline configuration if
+# available. Warn the user if no dataset is configured.
+# ---------------------------------------------------------------------------
+if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        with open(cfg_path) as f:
+            cfg = json.load(f)
+        selected = cfg.get("selected_dataset")
+        if selected:
+            st.session_state.dataset_select = selected
+
+if "dataset_select" not in st.session_state:
+    st.warning("⚠️ Dataset not configured.")
+    if st.button("Go back to Configurations"):
+        st.switch_page("pages/Configurations.py")
     st.stop()
 
-config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
-if not os.path.exists(config_path):
-    st.error("Configuration file not found!")
-    st.stop()
-
-with open(config_path) as f:
-    config = json.load(f)
-
-selected_dataset = config.get("selected_dataset")
-if not selected_dataset:
-    st.error("No dataset selected!")
-    st.stop()
-
+selected_dataset = st.session_state.dataset_select
 datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
 
 # Function to load and display table with propagated errors
