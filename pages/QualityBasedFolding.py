@@ -171,6 +171,11 @@ def show_cell_dialog(cell, fold_name):
             st.session_state.cell_folds[old_dom][fold_name].remove(cell)
             st.session_state.cell_folds[new_dom][new_loc].append(cell)
 
+            if not st.session_state.cell_folds[old_dom][fold_name]:
+                del st.session_state.cell_folds[old_dom][fold_name]
+                if not st.session_state.cell_folds[old_dom]:
+                    del st.session_state.cell_folds[old_dom]
+
             if "pipeline_path" in st.session_state:
                 cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
                 with open(cfg_path, "r") as f:
@@ -407,5 +412,4 @@ if st.button("💾 Save Cell Folds and Continue", key="save_cell_folds"):
         st.success("✅ Saved.")
     else:
         st.warning("⚠️ No pipeline path set.")
-
-# Next page button is handled elsewhere
+    st.switch_page("pages/Labeling.py")

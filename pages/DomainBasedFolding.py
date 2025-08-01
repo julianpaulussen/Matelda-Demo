@@ -204,5 +204,4 @@ if st.session_state.get("run_folding"):
             st.success("Domain folds saved to pipeline configurations!")
         else:
             st.warning("No pipeline selected; domain folds not saved.")
-
-    # Next page is handled elsewhere
+        st.switch_page("pages/QualityBasedFolding.py")
