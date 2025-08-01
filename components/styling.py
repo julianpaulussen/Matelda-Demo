@@ -9,17 +9,33 @@ def apply_base_styles():
     st.markdown(
         """
         <style>
-            [data-testid="stSidebarNav"] {display: none;}
-            /* Keep columns from wrapping on small screens */
-            @media (max-width: 768px) {
-                div[data-testid="stHorizontalBlock"] {
-                    flex-wrap: nowrap;
-                    overflow-x: auto;
-                }
-                div[data-testid="stHorizontalBlock"] > div {
-                    min-width: 120px;
-                }
+          [data-testid="stSidebarNav"] {
+            display: none !important;
+          }
+
+          [data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+          }
+          [data-testid="stHorizontalBlock"] > div {
+            padding: 0 !important;
+          }
+
+          [data-testid="stTable"],
+          [data-testid="stCheckbox"] > div {
+            flex: 0 0 auto !important;
+          }
+
+          @media (max-width: 768px) {
+            .block-container {
+              min-width: 0 !important;
             }
+            [data-testid="stHorizontalBlock"] > div,
+            [data-testid="stTable"],
+            [data-testid="stCheckbox"] > div {
+              min-width: 0 !important;
+            }
+          }
         </style>
         """,
         unsafe_allow_html=True,
@@ -32,48 +48,19 @@ def apply_folding_styles():
         """
         <style>
         div.action-container div[data-testid="stHorizontalBlock"] {
-            gap:0 !important;
+            gap: 0 !important;
         }
         div.action-container div[data-testid="column"] {
-            padding:0 !important;
+            padding: 0 !important;
+            flex: 1 1 0 !important;
         }
         div.action-container button {
-            margin:0 !important;
+            margin: 0 !important;
+            width: 100%;
         }
         div[data-testid="baseButton-primary"] > button {
             background-color: #ff4b4b;
             color: white;
-        }
-        div.fold-row div[data-testid="stHorizontalBlock"],
-        div.table-row div[data-testid="stHorizontalBlock"] {
-            gap:0 !important;
-        }
-        div.fold-row div[data-testid="column"],
-        div.table-row div[data-testid="column"] {
-            padding:0 !important;
-        }
-        div.fold-row [data-testid="stCheckbox"],
-        div.table-row [data-testid="stCheckbox"] {
-            margin:0 !important;
-        }
-        /* Mobile-specific fixes for checkbox spacing */
-        @media (max-width: 768px) {
-            div.fold-row div[data-testid="column"]:first-child,
-            div.table-row div[data-testid="column"]:first-child {
-                width: 40px !important;
-                min-width: 40px !important;
-                max-width: 40px !important;
-                flex: 0 0 40px !important;
-            }
-            div.fold-row div[data-testid="column"]:last-child,
-            div.table-row div[data-testid="column"]:last-child {
-                flex: 1 !important;
-                min-width: auto !important;
-            }
-            div.fold-row div[data-testid="stHorizontalBlock"],
-            div.table-row div[data-testid="stHorizontalBlock"] {
-                gap: 8px !important;
-            }
         }
         </style>
         """,
