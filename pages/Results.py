@@ -6,6 +6,7 @@ import datetime
 import pandas as pd
 import urllib.parse
 from components import render_sidebar, apply_base_styles
+from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Results", layout="wide")
@@ -210,12 +211,30 @@ st.dataframe(styled_all_df)
 
 
 st.markdown("---")
-# Share Result button with additional share options (only if dataset is configured)
-if dataset_configured and st.button("Share Result"):
+
+# Social Share Section (only if dataset is configured)
+if dataset_configured:
+    st.markdown("### 📤 Share Your Results")
+    st.markdown("Share your Matelda performance metrics with the community!")
+    
+    # Create share text with more detailed information
     share_text = (
-        f"Check out my Matelda results! Recall: {recall_score:.2f}, "
-        f"F1: {f1_score:.2f}, Precision: {precision_score:.2f}"
+        f"🎯 Just achieved some great results with Matelda! "
+        f"📊 Recall: {recall_score:.2f} | F1: {f1_score:.2f} | Precision: {precision_score:.2f} "
+        f"📈 Dataset: {current_dataset} | Pipeline: {current_pipeline_name} "
+        f"#ErrorDetection #DataCleaning #D2IP #TUB #VLDB"
     )
-    st.code(share_text)
+    
+    current_url = "https://www.tu.berlin/d2ip" 
+    
+    shared = streamlit_social_share(
+        text=share_text,
+        url=current_url,
+        networks=["linkedin", "reddit", "email", "whatsapp", "telegram"],
+        key="shared"
+    )
+    
+    st.markdown("**📋 Copy Share Text:**")
+    st.code(share_text, language=None)
 
 st.balloons()
