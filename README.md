@@ -5,7 +5,7 @@
 [![Streamlit](https://img.shields.io/badge/streamlit-1.0+-red.svg)](https://streamlit.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Matelda provides a comprehensive toolkit for analyzing datasets, detecting errors, and implementing quality-based data folding strategies.
+Matelda provides a comprehensive toolkit for analyzing datasets, detecting errors, and implementing folding strategies.
 
 ## 🎯 Supported Datasets
 
