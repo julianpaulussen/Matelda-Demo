@@ -1,11 +1,22 @@
-# 🚀 Matelda
+# Demonstrating Matelda for Multi-Table Error Detection
 
 [![Read Paper](https://img.shields.io/badge/📄%20Read%20Paper-OpenProceedings-blue)](https://www.openproceedings.org/2025/conf/edbt/paper-98.pdf)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.0+-red.svg)](https://streamlit.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Matelda provides a comprehensive toolkit for analyzing datasets, detecting errors, and implementing folding strategies.
+Real-world datasets are often fragmented across multiple heterogeneous tables, managed by different teams or organizations. Ensuring data quality in such environments is challenging, as traditional error detection tools typically operate on isolated tables and overlook cross-table relationships. To address this gap, we investigate how cleaning multiple tables simultaneously, combined with structured user collaboration, can reduce annotation effort and enhance the effectiveness and efficiency of error detection.
+
+We present Matelda, an interactive system for multi-table error detection that combines automated error detection with human-in-the-loop refinement. Matelda guides users through Inspection \& Action, allowing them to explore system-generated insights, refine decisions, and annotate data with contextual support. It organizes tables using domain-based and quality-based folding and leverages semi-supervised learning to propagate labels across related tables efficiently. Our demonstration showcases Matelda’s capabilities for collaborative error detection and resolution by leveraging shared knowledge, contextual similarity, and structured user interactions across multiple tables.
+
+## Screenshots 
+
+![Pipeline](screenshots/pipeline-git.png)
+![Labeling](screenshots/labeling-git.png)
+
+## Video
+
+Link to the Video: [Matelda Demo](videos/Matelda-Demo.mp4)
 
 ## 🎯 Supported Datasets
 
@@ -98,3 +109,5 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/lejuliennn/data-tinder/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/lejuliennn/data-tinder/discussions)
+
+Thank you for choosing *Matelda for efficient data lake cleaning. We believe that this approach will significantly improve the quality of your data while saving you time and resources. Happy data cleaning!
