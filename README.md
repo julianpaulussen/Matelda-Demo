@@ -1,73 +1,100 @@
-# 🌟 Matelda - A Streamlit Demo
+# 🚀 Matelda - Data Quality Assessment Tool
 
-🚀 **Matelda** is an interactive Streamlit demo..
-
-📄 **Read the full paper**:  
 [![Read Paper](https://img.shields.io/badge/📄%20Read%20Paper-OpenProceedings-blue)](https://www.openproceedings.org/2025/conf/edbt/paper-98.pdf)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Streamlit](https://img.shields.io/badge/streamlit-1.0+-red.svg)](https://streamlit.io)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
+Matelda provides a comprehensive toolkit for analyzing datasets, detecting errors, and implementing quality-based data folding strategies.
 
-## 🎬 Quick Start
+## 🎯 Supported Datasets
 
-### 📥 Installation
+### 📊 Demo Datasets
+- **Chess.com** - Chess game data analysis
+- **Lichess** - Online chess platform data
+- **Pokemon** - Pokemon statistics and attributes
 
-1. **Clone the repository**  
-   ```bash
-   git clone https://github.com/lejuliennn/data-tinder.git
-   cd data-tinder
-   ```
-2. **Create a virtual environment** (optional but recommended)  
+### 🏢 Quintet Collection
+- **Beers** - Beer ratings and characteristics
+- **Flights** - Flight data and schedules
+- **Hospital** - Medical data analysis
+- **Movies** - Movie ratings and metadata
+- **Rayyan** - Research paper screening data
+
+## 📦 Installation
+
+```bash
+git clone https://github.com/lejuliennn/data-tinder.git
+cd data-tinder
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+Ensure you have Python 3.8+ installed on your system.
+
+### Setup
+
+1. **Create a virtual environment** (recommended)
    ```bash
    python -m venv venv
    source venv/bin/activate  # On MacOS/Linux
    venv\Scripts\activate     # On Windows
    ```
-3. **Install dependencies (Not added yet)**  
+
+2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-### 🚀 Run the App
+3. **Run the application**
+   ```bash
+   streamlit run app.py
+   ```
+
+4. **Open your browser** to `http://localhost:8501`
+
+## 🛠️ Architecture
+
+### Core Components
+
+- **Backend**: Core data processing and ML algorithms (`backend/`)
+- **Components**: Reusable UI components (`components/`)
+- **Pages**: Application pages and workflows (`pages/`)
+- **Pipelines**: Pre-configured processing pipelines (`pipelines/`)
+
+## 🧪 Development
+
+### Local Development
+
 ```bash
-streamlit run app.py
+# Clone the repository
+git clone https://github.com/lejuliennn/data-tinder.git
+cd data-tinder
+
+# Install development dependencies
+pip install -r requirements.txt
+
+# Run in development mode
+streamlit run app.py --server.runOnSave true
 ```
-
----
-
-## ⚡ Features
-✅ **Interactive UI** – Experience a seamless and user-friendly interface.  
-✅ **Live Data Processing** – Real-time visualization and analysis.  
-✅ **Custom Configurations** – Easily modify parameters within the app.
-✅ **Share Results** – Quickly share your metrics with a single click.
-✅ **Open Source** – Contributions and enhancements are welcome!
-
----
-
-## 🖼 Preview
-
-📸 **Screenshots coming soon!**  
-
----
 
 ## 🤝 Contributing
 
-Contributions are welcome! Feel free to open an **issue** or submit a **pull request**.
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-1. Fork the repository  
-2. Create a feature branch (`git checkout -b feature-xyz`)  
-3. Commit your changes (`git commit -m "Add feature xyz"`)  
-4. Push to the branch (`git push origin feature-xyz`)  
-5. Open a pull request 🚀  
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
----
+## 📄 License
 
-## 📜 License
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-📝 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+## 📞 Support
 
----
-
-## 💡 Stay Updated
-
-⭐ If you like this project, give it a star on GitHub!  
-📩 Have questions? Reach out to us :)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/lejuliennn/data-tinder/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/lejuliennn/data-tinder/discussions)
