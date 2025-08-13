@@ -62,6 +62,21 @@ def apply_folding_styles():
             background-color: #ff4b4b;
             color: white;
         }
+
+        /* Distinct style for the per-fold "Show more" control */
+        .show-more-container button {
+            background-color: #0f62fe !important; /* IBM blue for contrast */
+            color: #ffffff !important;
+            border: 1px solid #0b5bd3 !important;
+            box-shadow: none !important;
+        }
+        .show-more-container button:hover {
+            background-color: #0b5bd3 !important;
+            border-color: #0949a6 !important;
+        }
+        .show-more-container [data-testid="stButton"] {
+            width: 100% !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
