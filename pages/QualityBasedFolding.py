@@ -324,7 +324,7 @@ for dom, folds in st.session_state.cell_folds.items():
             btn_row = st.columns([4, action_col_width])
             with btn_row[0]:
                 st.markdown('<div class="show-more-container">', unsafe_allow_html=True)
-                if st.button("+ Show 5 More Cells", key=f"show_more_{fname}", use_container_width=True):
+                if st.button("+ Show more Cells", key=f"show_more_{fname}", use_container_width=True):
                     # Update visible cells and immediately rerun to reflect change
                     st.session_state[visible_key] = min(total_cells, show_upto + 5)
                     st.rerun()
