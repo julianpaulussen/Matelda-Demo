@@ -289,7 +289,16 @@ for dom, folds in st.session_state.cell_folds.items():
         else:
             fold_cols[1].empty()
 
-        for cell_idx, cell in enumerate(cell_list):
+        # Limit initial cells shown and add incremental reveal button
+        visible_key = f"visible_cells_{fname}"
+        total_cells = len(cell_list)
+        if visible_key not in st.session_state:
+            st.session_state[visible_key] = 3
+        # Clamp in case fold sizes change
+        st.session_state[visible_key] = max(0, min(st.session_state[visible_key], total_cells))
+        show_upto = st.session_state[visible_key]
+
+        for cell_idx, cell in enumerate(cell_list[:show_upto]):
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
             cell_cols = st.columns([4, action_col_width])
@@ -309,6 +318,17 @@ for dom, folds in st.session_state.cell_folds.items():
                     st.session_state.selected_cells_for_split[fname] = selected_cells
             else:
                 cell_cols[1].empty()
+
+        # Show more button per fold if more cells are available
+        if show_upto < total_cells:
+            btn_row = st.columns([4, action_col_width])
+            with btn_row[0]:
+                st.markdown('<div class="show-more-container">', unsafe_allow_html=True)
+                if st.button("+ Show 5 More Cells", key=f"show_more_{fname}", use_container_width=True):
+                    # Update visible cells and immediately rerun to reflect change
+                    st.session_state[visible_key] = min(total_cells, show_upto + 5)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
