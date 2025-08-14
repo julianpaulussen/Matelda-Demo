@@ -9,6 +9,7 @@ from .utils import (
     save_pipeline_config,
     update_domain_folds_in_config
 )
+from .error_viewer import render_error_detection_viewer
 
 __all__ = [
     'render_sidebar',
@@ -21,4 +22,5 @@ __all__ = [
     'load_pipeline_config',
     'save_pipeline_config',
     'update_domain_folds_in_config'
+    , 'render_error_detection_viewer'
 ]
