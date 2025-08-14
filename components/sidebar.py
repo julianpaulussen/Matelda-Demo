@@ -24,7 +24,9 @@ def render_sidebar():
         ("pages/Configurations.py", "Configurations"),
         ("pages/DomainBasedFolding.py", "Domain Based Folding"),
         ("pages/QualityBasedFolding.py", "Quality Based Folding"),
+        ("pages/LabelingMode.py", "Labeling Mode"),
         ("pages/Labeling.py", "Labeling"),
+        ("pages/Multiplayer.py", "Multiplayer"),
         ("pages/PropagatedErrors.py", "Propagated Errors"),
         ("pages/ErrorDetection.py", "Error Detection"),
         ("pages/Results.py", "Results")

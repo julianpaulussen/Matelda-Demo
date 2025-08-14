@@ -38,6 +38,7 @@ watchdog==6.0.0
 streamlit-swipecards==0.3.2
 streamlit-social-share==0.1.0
 matplotlib==3.8.4
+qrcode==7.4.2
 
 # Backend
 
