@@ -1,6 +1,7 @@
 # Components package for data-tinder
 from .sidebar import render_sidebar
 from .styling import apply_base_styles, apply_folding_styles
+from .restart import render_restart_expander, render_inline_restart_button
 from .utils import (
     get_datasets_path,
     load_clean_table,
@@ -13,6 +14,8 @@ __all__ = [
     'render_sidebar',
     'apply_base_styles',
     'apply_folding_styles',
+    'render_restart_expander',
+    'render_inline_restart_button',
     'get_datasets_path',
     'load_clean_table',
     'load_pipeline_config',

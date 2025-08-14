@@ -5,7 +5,7 @@ import json
 import datetime
 import pandas as pd
 import urllib.parse
-from components import render_sidebar, apply_base_styles
+from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
 from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles
@@ -238,3 +238,15 @@ if dataset_configured:
     st.code(share_text, language=None)
 
 st.balloons()
+
+# Navigation: Restart | Back (no Next since this is the final page)
+st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="results", use_container_width=True)
+
+# Back: to Error Detection
+if nav_cols[1].button("Back", key="results_back", use_container_width=True):
+    st.switch_page("pages/ErrorDetection.py")

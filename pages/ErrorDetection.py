@@ -5,7 +5,7 @@ import time
 import os
 import json
 from backend import backend_pull_errors
-from components import render_sidebar, apply_base_styles
+from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
@@ -95,6 +95,17 @@ with st.spinner("🔍 Searching for possible errors in the datasets..."):
                     ---
                     """)
 
-# Navigation button to move to the next page
-if st.button("Next"):
+st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="error_detection", use_container_width=True)
+
+# Back: to Propagated Errors
+if nav_cols[1].button("Back", key="err_back", use_container_width=True):
+    st.switch_page("pages/PropagatedErrors.py")
+
+# Next: to Results
+if nav_cols[2].button("Next", key="err_next", use_container_width=True):
     st.switch_page("pages/Results.py")

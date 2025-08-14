@@ -5,7 +5,15 @@ import json
 import time
 import numpy as np
 from backend import backend_qbf
-from components import render_sidebar, apply_base_styles, apply_folding_styles, get_datasets_path, load_clean_table
+from components import (
+    render_sidebar,
+    apply_base_styles,
+    apply_folding_styles,
+    get_datasets_path,
+    load_clean_table,
+    render_restart_expander,
+    render_inline_restart_button,
+)
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
@@ -14,6 +22,26 @@ st.title("Quality Based Folding")
 # Apply styles
 apply_base_styles()
 apply_folding_styles()
+
+# Custom CSS for small show more button
+st.markdown("""
+<style>
+.small-show-more button {
+    font-size: 10px !important;
+    padding: 2px 8px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    border-radius: 12px !important;
+    background-color: #f0f2f6 !important;
+    border: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
+}
+.small-show-more button:hover {
+    background-color: #e5e7eb !important;
+    border-color: #9ca3af !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Sidebar navigation
 render_sidebar()
@@ -323,8 +351,8 @@ for dom, folds in st.session_state.cell_folds.items():
         if show_upto < total_cells:
             btn_row = st.columns([4, action_col_width])
             with btn_row[0]:
-                st.markdown('<div class="show-more-container">', unsafe_allow_html=True)
-                if st.button("+ Show more Cells", key=f"show_more_{fname}", use_container_width=True):
+                st.markdown('<div class="small-show-more">', unsafe_allow_html=True)
+                if st.button("+ show more cells", key=f"show_more_{fname}", use_container_width=False):
                     # Update visible cells and immediately rerun to reflect change
                     st.session_state[visible_key] = min(total_cells, show_upto + 5)
                     st.rerun()
@@ -394,7 +422,6 @@ if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge
 if st.session_state.split_mode:
     any_split = any(st.session_state.selected_cells_for_split.get(fold, []) for fold in st.session_state.selected_cells_for_split)
     if any_split:
-        st.markdown("---")
         split_confirm_cols = st.columns([4, 1])
         if split_confirm_cols[1].button("Confirm Split", key="confirm_split", use_container_width=True):
             for fold_name, selected_cells in st.session_state.selected_cells_for_split.items():
@@ -426,10 +453,20 @@ if st.session_state.split_mode:
             st.session_state.selected_cells_for_split = {}
             st.rerun()
 
+# Navigation row: Restart | Back | Next
 st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
 
-# Save folds
-if st.button("💾 Save Cell Folds and Continue", key="save_cell_folds"):
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="quality_based_folding", use_container_width=True)
+
+# Back: to Domain Based Folding
+if nav_cols[1].button("Back", key="qbf_back", use_container_width=True):
+    st.switch_page("pages/DomainBasedFolding.py")
+
+# Next: Save and Continue
+if nav_cols[2].button("Next", key="save_cell_folds", use_container_width=True):
     if "pipeline_path" in st.session_state:
         cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
         with open(cfg_path, "r") as f:
