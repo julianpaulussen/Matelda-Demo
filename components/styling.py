@@ -9,8 +9,30 @@ def apply_base_styles():
     st.markdown(
         """
         <style>
+          /* Aggressively hide default Streamlit sidebar navigation */
           [data-testid="stSidebarNav"] {
             display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+          }
+          
+          /* Hide any Streamlit navigation elements */
+          .css-1d391kg, .css-1vencpc, .css-1lcbmhc, .css-17eq0hr {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+          }
+          
+          /* Prevent any sidebar navigation from appearing during page load */
+          .stApp [data-testid="stSidebarNav"] {
+            display: none !important;
+          }
+          
+          /* Ensure fast rendering of custom sidebar content */
+          .sidebar-nav {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
           }
 
           [data-testid="stHorizontalBlock"] {
