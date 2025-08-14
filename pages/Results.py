@@ -32,6 +32,7 @@ if "pipeline_path" in st.session_state:
     config_path = os.path.join(current_pipeline_path, "configurations.json")
     config = load_config(config_path)
     results = config.get("results", [])
+    current_labeling_budget = config.get("labeling_budget", "N/A")
 
     if results:
         latest_result = results[-1]
@@ -49,7 +50,7 @@ else:
     st.error("No pipeline selected!")
     st.stop()
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 # -----------------------------------------------------------------------------
 # Ensure that the current dataset is defined in session state.
@@ -70,6 +71,8 @@ if dataset_configured:
         st.metric(label="F1 Score", value=f"{f1_score:.2f}")
     with col3:
         st.metric(label="Precision", value=f"{precision_score:.2f}")
+    with col4:
+        st.metric(label="Labeling Budget", value=str(current_labeling_budget))
 else:
     with col1:
         st.warning("⚠️ Dataset not configured.")
@@ -77,6 +80,7 @@ else:
             st.switch_page("pages/Configurations.py")
     col2.empty()
     col3.empty()
+    col4.empty()
 
 current_pipeline_name = os.path.basename(current_pipeline_path)
 pipelines_folder = os.path.join(os.path.dirname(__file__), "../pipelines")
@@ -143,9 +147,21 @@ if dataset_configured:
     })
 
     st.markdown("---")
-    st.markdown(f"#### Result Comparison (Dataset: {current_dataset}):")
+    st.markdown(f"#### Result Comparison (Dataset: {current_dataset})")
     st.write("_(Click on column headers to sort the table.)_")
     st.dataframe(styled_same_dataset_df)
+    
+    # Interactive graph for same dataset comparison
+    if not same_dataset_df.empty and len(same_dataset_df) > 1:        
+        # Create a chart showing metrics for each pipeline
+        chart_data = same_dataset_df.set_index('Pipeline Name')[['Recall', 'F1', 'Precision']]
+        
+        # Display as line chart
+        # st.line_chart(chart_data)
+        
+        # Also show as bar chart for better comparison
+        st.markdown("**Pipeline Performance Comparison**")
+        st.bar_chart(chart_data)
 
 # ---------------- ALL DATASETS ----------------
 all_rows = []
@@ -205,9 +221,32 @@ styled_all_df = all_df.style.apply(highlight_current, axis=1).format({
 })
 
 st.markdown("---")
-st.markdown("#### Result Comparison (All Pipelines/Datasets):")
+st.markdown("#### Result Comparison (All Pipelines/Datasets)")
 st.write("_(Click on column headers to sort the table.)_")
 st.dataframe(styled_all_df)
+
+# Interactive graph for all datasets comparison
+if not all_df.empty and len(all_df) > 1:
+    
+    # Show pipeline comparison
+    st.markdown("**Pipeline Performance Comparison**")
+    
+    # Create a chart showing performance by pipeline
+    pipeline_chart_data = all_df.pivot_table(
+        index='Pipeline Name', 
+        values=['Recall', 'F1', 'Precision'], 
+        aggfunc='mean'
+    )
+    
+    st.bar_chart(pipeline_chart_data)
+
+    st.markdown("---")
+    
+    # Show performance vs labeling budget
+
+    st.markdown("**Performance vs Labeling Budget**")
+    budget_data = all_df.groupby('Labeling Budget')[['Recall', 'F1', 'Precision']].mean()
+    st.line_chart(budget_data)
 
 
 st.markdown("---")
@@ -221,7 +260,8 @@ if dataset_configured:
     share_text = (
         f"🎯 Just achieved some great results with Matelda! "
         f"📊 Recall: {recall_score:.2f} | F1: {f1_score:.2f} | Precision: {precision_score:.2f} "
-        f"📈 Dataset: {current_dataset} | Pipeline: {current_pipeline_name} "
+        f"� Budget: {current_labeling_budget} | "
+        f"�📈 Dataset: {current_dataset} | Pipeline: {current_pipeline_name} "
         f"#ErrorDetection #DataCleaning #D2IP #TUB #VLDB"
     )
     
