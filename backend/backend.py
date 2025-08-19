@@ -7,6 +7,21 @@ import streamlit as st
 from .domain_folding import load_from_cache, matelda_domain_folding, save_to_cache
 
 
+def get_available_strategies() -> List[str]:
+    """Return a mock list of available error detection strategies.
+
+    This is a placeholder and should be replaced with a real discovery
+    mechanism once strategies are implemented.
+    """
+    return [
+        "Uncertainty Sampling",
+        "Diversity Sampling",
+        "Core-Set Selection",
+        "Margin Confidence",
+        "Entropy Ranking",
+    ]
+
+
 def backend_dbf(dataset: str, labeling_budget: int) -> dict:
     """
     Backend function that performs domain-based folding with caching.
