@@ -1,7 +1,12 @@
 import streamlit as st
 from components import render_sidebar, apply_base_styles
 
-st.set_page_config(page_title="Matelda", layout="wide")
+st.set_page_config(
+    page_title="Matelda", 
+    layout="wide",
+    page_icon="🔧",
+    initial_sidebar_state="expanded"
+)
 
 # Apply base styles
 apply_base_styles()
