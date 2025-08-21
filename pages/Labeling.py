@@ -102,7 +102,7 @@ if st.session_state.run_quality_folding:
     st.info(
         "Swipe left to mark as error, swipe right to mark as correct.")
 
-    results = streamlit_swipecards(cards=card_data, display_mode="table", key="labeling_cards")
+    results = streamlit_swipecards(cards=card_data, display_mode="table", view="desktop", key="labeling_cards")
 
     if "labeling_results" not in st.session_state:
         st.session_state.labeling_results = {}
