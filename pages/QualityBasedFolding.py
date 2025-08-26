@@ -13,15 +13,17 @@ from components import (
     load_clean_table,
     render_restart_expander,
     render_inline_restart_button,
+    get_current_theme,
 )
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
 st.title("Quality Based Folding")
 
-# Apply styles
-apply_base_styles()
-apply_folding_styles()
+# Apply styles with current theme
+current_theme = get_current_theme()
+apply_base_styles(current_theme)
+apply_folding_styles(current_theme)
 
 # Custom CSS for small show more button
 st.markdown("""

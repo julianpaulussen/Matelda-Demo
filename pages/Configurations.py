@@ -12,11 +12,13 @@ from components import (
     load_pipeline_config,
     save_pipeline_config,
     render_inline_restart_button,
+    get_current_theme,
 )
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Configurations", layout="wide")
-apply_base_styles()
+current_theme = get_current_theme()
+apply_base_styles(current_theme)
 
 # Sidebar navigation
 render_sidebar()

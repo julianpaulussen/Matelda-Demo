@@ -1,5 +1,5 @@
 import streamlit as st
-from components import render_sidebar, apply_base_styles
+from components import render_sidebar, apply_base_styles, get_current_theme
 
 st.set_page_config(
     page_title="Matelda", 
@@ -8,8 +8,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Apply base styles
-apply_base_styles()
+# Apply base styles with current theme
+current_theme = get_current_theme()
+apply_base_styles(current_theme)
 
 st.title("Matelda")
 st.write("Welcome to Matelda!")

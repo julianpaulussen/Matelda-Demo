@@ -6,38 +6,80 @@ import toml
 import os
 
 
-def load_theme_config():
-    """Load theme configuration from .streamlit/config.toml"""
+def load_theme_config(theme_mode=None):
+    """Load theme configuration from .streamlit/config.toml or dark variant"""
     try:
-        config_path = os.path.join(os.path.dirname(__file__), "../.streamlit/config.toml")
+        if theme_mode == "dark":
+            config_path = os.path.join(os.path.dirname(__file__), "../.streamlit/config_dark.toml")
+        else:
+            config_path = os.path.join(os.path.dirname(__file__), "../.streamlit/config.toml")
+        
         with open(config_path, 'r') as f:
             config = toml.load(f)
         return config.get('theme', {})
     except (FileNotFoundError, toml.TomlDecodeError):
         # Fallback theme values if config.toml is not found or invalid
-        return {
-            'primaryColor': '#F0C38E',
-            'backgroundColor': '#48426D', 
-            'secondaryBackgroundColor': '#312C51',
-            'textColor': '#45474b',
-            'font': 'monospace'
-        }
+        if theme_mode == "dark":
+            return {
+                'primaryColor': '#4CAF50',
+                'backgroundColor': '#1a1a1a', 
+                'secondaryBackgroundColor': '#2d2d2d',
+                'textColor': '#ffffff',
+                'font': 'monospace'
+            }
+        else:
+            return {
+                'primaryColor': '#002f67',
+                'backgroundColor': '#e6e6e6', 
+                'secondaryBackgroundColor': '#ffffff',
+                'textColor': '#002f67',
+                'font': 'monospace'
+            }
 
 
-def apply_base_styles():
+def apply_base_styles(theme_mode=None):
     """Apply base styles that are common across all pages"""
-    theme = load_theme_config()
+    theme = load_theme_config(theme_mode)
     
-    # Extract theme values
-    bg_color = theme.get('backgroundColor', '#48426D')
-    text_color = theme.get('textColor', '#45474b')
-    primary_color = theme.get('primaryColor', '#F0C38E')
-    secondary_bg = theme.get('secondaryBackgroundColor', '#312C51')
+    # Extract theme values and clean them
+    bg_color = theme.get('backgroundColor', '#e6e6e6').strip()
+    text_color = theme.get('textColor', '#002f67').strip()
+    primary_color = theme.get('primaryColor', '#002f67').strip()
+    secondary_bg = theme.get('secondaryBackgroundColor', '#ffffff').strip()
     font = theme.get('font', 'monospace')
+    base_theme = theme.get('base', 'light')
+    
+    # Determine contrasting colors for button text based on theme
+    if base_theme == 'dark':
+        button_text_color = '#ffffff'  # White text on dark themes
+        button_hover_color = '#333333'  # Darker background on hover
+    else:
+        button_text_color = '#ffffff'  # White text on light themes for better contrast
+        button_hover_color = '#f0f0f0'  # Light background on hover
+    
+    # Ensure proper hex color format (remove extra characters)
+    if len(text_color) > 7:
+        text_color = text_color[:7]
+    if len(bg_color) > 7:
+        bg_color = bg_color[:7]
+    if len(primary_color) > 7:
+        primary_color = primary_color[:7]
+    if len(secondary_bg) > 7:
+        secondary_bg = secondary_bg[:7]
     
     st.markdown(
         f"""
         <style>
+          /* Global theme application */
+          :root {{
+            --primary-color: {primary_color};
+            --background-color: {bg_color};
+            --secondary-background-color: {secondary_bg};
+            --text-color: {text_color};
+            --button-text-color: {button_text_color};
+            --font-family: {font};
+          }}
+          
           /* Apply theme colors to root and all containers */
           html, body, .stApp, .main, [data-testid="stAppViewContainer"] {{
             background-color: {bg_color} !important;
@@ -61,11 +103,134 @@ def apply_base_styles():
             background-color: {secondary_bg} !important;
           }}
           
-          /* Primary color for buttons and interactive elements */
-          .stButton > button {{
+          /* Buttons and interactive elements */
+          .stButton > button, [data-testid="baseButton-primary"] {{
             background-color: {primary_color} !important;
+            color: {button_text_color} !important;
+            border: 1px solid {primary_color} !important;
+            font-weight: 500 !important;
+          }}
+          
+          .stButton > button:hover, [data-testid="baseButton-primary"]:hover {{
+            background-color: {primary_color}DD !important;
+            border-color: {primary_color} !important;
+            color: {button_text_color} !important;
+          }}
+          
+          /* Secondary buttons */
+          .stButton > button[kind="secondary"] {{
+            background-color: transparent !important;
+            color: {primary_color} !important;
+            border: 1px solid {primary_color} !important;
+          }}
+          
+          .stButton > button[kind="secondary"]:hover {{
+            background-color: {primary_color}22 !important;
+            color: {primary_color} !important;
+          }}
+          
+          /* Form elements */
+          .stSelectbox > div > div, .stTextInput > div > div > input,
+          .stNumberInput > div > div > input, .stTextArea > div > div > textarea {{
+            background-color: {secondary_bg} !important;
             color: {text_color} !important;
-            border: none !important;
+            border-color: {primary_color} !important;
+          }}
+          
+          /* Expanders */
+          .streamlit-expanderHeader {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          
+          .streamlit-expanderContent {{
+            background-color: {bg_color} !important;
+            color: {text_color} !important;
+          }}
+          
+          /* Tables */
+          .stDataFrame, [data-testid="stDataFrame"] {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          
+          .stDataFrame table, [data-testid="stDataFrame"] table {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          
+          .stDataFrame th, [data-testid="stDataFrame"] th {{
+            background-color: {primary_color} !important;
+            color: {button_text_color} !important;
+          }}
+
+          /* Static tables (st.table) */
+          [data-testid="stTable"] {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+            border-color: {primary_color} !important;
+          }}
+          [data-testid="stTable"] table {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          [data-testid="stTable"] th {{
+            background-color: {primary_color} !important;
+            color: {button_text_color} !important;
+          }}
+          
+          /* Tabs */
+          .stTabs [data-baseweb="tab-list"] {{
+            background-color: {secondary_bg} !important;
+          }}
+          
+          .stTabs [data-baseweb="tab"] {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          
+          .stTabs [aria-selected="true"] {{
+            background-color: {primary_color} !important;
+            color: {button_text_color} !important;
+          }}
+          
+          /* Columns */
+          .stColumn {{
+            background-color: inherit !important;
+            color: {text_color} !important;
+          }}
+          
+          /* Metrics */
+          .metric-container {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          
+          /* Progress bars */
+          .stProgress > div > div {{
+            background-color: {primary_color} !important;
+          }}
+          
+          /* Sliders */
+          .stSlider > div > div > div > div {{
+            background-color: {primary_color} !important;
+          }}
+          
+          /* Radio buttons and checkboxes */
+          .stRadio > div, .stCheckbox > div {{
+            color: {text_color} !important;
+          }}
+          
+          /* Alerts and messages */
+          .stAlert {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          
+          /* Code blocks */
+          .stCodeBlock, code {{
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
           }}
           
           /* Aggressively hide default Streamlit sidebar navigation */
@@ -123,41 +288,52 @@ def apply_base_styles():
     )
 
 
-def apply_folding_styles():
+def apply_folding_styles(theme_mode=None):
     """Apply styles specific to domain and quality based folding pages"""
+    theme = load_theme_config(theme_mode)
+    primary_color = theme.get('primaryColor', '#002f67').strip()
+    text_color = theme.get('textColor', '#002f67').strip()
+    base_theme = theme.get('base', 'light')
+    
+    # Determine contrasting colors for button text based on theme
+    if base_theme == 'dark':
+        button_text_color = '#ffffff'
+    else:
+        button_text_color = '#ffffff'  # Use white for better contrast on colored backgrounds
+    
     st.markdown(
-        """
+        f"""
         <style>
-        div.action-container div[data-testid="stHorizontalBlock"] {
+        div.action-container div[data-testid="stHorizontalBlock"] {{
             gap: 0 !important;
-        }
-        div.action-container div[data-testid="column"] {
+        }}
+        div.action-container div[data-testid="column"] {{
             padding: 0 !important;
             flex: 1 1 0 !important;
-        }
-        div.action-container button {
+        }}
+        div.action-container button {{
             margin: 0 !important;
             width: 100%;
-        }
-        div[data-testid="baseButton-primary"] > button {
-            background-color: #ff4b4b;
-            color: white;
-        }
+        }}
+        div[data-testid="baseButton-primary"] > button {{
+            background-color: #ff4b4b !important;
+            color: white !important;
+        }}
 
         /* Distinct style for the per-fold "Show more" control */
-        .show-more-container button {
-            background-color: #0f62fe !important; /* IBM blue for contrast */
-            color: #ffffff !important;
-            border: 1px solid #0b5bd3 !important;
+        .show-more-container button {{
+            background-color: {primary_color} !important;
+            color: {button_text_color} !important;
+            border: 1px solid {primary_color} !important;
             box-shadow: none !important;
-        }
-        .show-more-container button:hover {
-            background-color: #0b5bd3 !important;
-            border-color: #0949a6 !important;
-        }
-        .show-more-container [data-testid="stButton"] {
+        }}
+        .show-more-container button:hover {{
+            background-color: {primary_color}CC !important;
+            border-color: {primary_color} !important;
+        }}
+        .show-more-container [data-testid="stButton"] {{
             width: 100% !important;
-        }
+        }}
         </style>
         """,
         unsafe_allow_html=True,

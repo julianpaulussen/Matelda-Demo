@@ -73,7 +73,7 @@ with st.spinner("🔍 Searching for possible errors in the datasets..."):
     propagated_errors = results["propagated_errors"]
     
     # Display tables with propagated errors
-    st.markdown("### 🔍 Detected Errors")
+    st.markdown("### Detected Errors")
     st.markdown("The intensity of the red highlighting indicates the confidence level of the error detection (darker = higher confidence)")
     
     for table, errors in propagated_errors.items():
