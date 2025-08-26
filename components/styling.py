@@ -103,30 +103,47 @@ def apply_base_styles(theme_mode=None):
             background-color: {secondary_bg} !important;
           }}
           
-          /* Buttons and interactive elements */
+          /* Buttons and interactive elements - use theme colors instead of primary */
           .stButton > button, [data-testid="baseButton-primary"] {{
-            background-color: {primary_color} !important;
-            color: {button_text_color} !important;
-            border: 1px solid {primary_color} !important;
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+            border: 1px solid {text_color}66 !important;
             font-weight: 500 !important;
+            font-family: {font} !important;
           }}
           
           .stButton > button:hover, [data-testid="baseButton-primary"]:hover {{
-            background-color: {primary_color}DD !important;
-            border-color: {primary_color} !important;
-            color: {button_text_color} !important;
+            background-color: {bg_color} !important;
+            border-color: {text_color} !important;
+            color: {text_color} !important;
           }}
           
           /* Secondary buttons */
           .stButton > button[kind="secondary"] {{
             background-color: transparent !important;
-            color: {primary_color} !important;
-            border: 1px solid {primary_color} !important;
+            color: {text_color} !important;
+            border: 1px solid {text_color}66 !important;
           }}
           
           .stButton > button[kind="secondary"]:hover {{
-            background-color: {primary_color}22 !important;
-            color: {primary_color} !important;
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+          }}
+          
+          /* Swipe card buttons - use main backgroundColor */
+          .swipe-button, .stButton.swipe-card > button {{
+            background-color: {bg_color} !important;
+            color: {text_color} !important;
+            border: 2px solid {text_color}66 !important;
+            border-radius: 8px !important;
+            font-family: {font} !important;
+            font-weight: 600 !important;
+          }}
+          
+          .swipe-button:hover, .stButton.swipe-card > button:hover {{
+            background-color: {secondary_bg} !important;
+            border-color: {text_color} !important;
+            transform: scale(1.02) !important;
           }}
           
           /* Form elements */
@@ -291,15 +308,21 @@ def apply_base_styles(theme_mode=None):
 def apply_folding_styles(theme_mode=None):
     """Apply styles specific to domain and quality based folding pages"""
     theme = load_theme_config(theme_mode)
-    primary_color = theme.get('primaryColor', '#002f67').strip()
+    
+    # Extract theme values and clean them
+    bg_color = theme.get('backgroundColor', '#e6e6e6').strip()
     text_color = theme.get('textColor', '#002f67').strip()
+    secondary_bg = theme.get('secondaryBackgroundColor', '#ffffff').strip()
+    font = theme.get('font', 'monospace')
     base_theme = theme.get('base', 'light')
     
-    # Determine contrasting colors for button text based on theme
-    if base_theme == 'dark':
-        button_text_color = '#ffffff'
-    else:
-        button_text_color = '#ffffff'  # Use white for better contrast on colored backgrounds
+    # Ensure proper hex color format
+    if len(text_color) > 7:
+        text_color = text_color[:7]
+    if len(bg_color) > 7:
+        bg_color = bg_color[:7]
+    if len(secondary_bg) > 7:
+        secondary_bg = secondary_bg[:7]
     
     st.markdown(
         f"""
@@ -322,14 +345,15 @@ def apply_folding_styles(theme_mode=None):
 
         /* Distinct style for the per-fold "Show more" control */
         .show-more-container button {{
-            background-color: {primary_color} !important;
-            color: {button_text_color} !important;
-            border: 1px solid {primary_color} !important;
+            background-color: {secondary_bg} !important;
+            color: {text_color} !important;
+            border: 1px solid {text_color}66 !important;
             box-shadow: none !important;
+            font-family: {font} !important;
         }}
         .show-more-container button:hover {{
-            background-color: {primary_color}CC !important;
-            border-color: {primary_color} !important;
+            background-color: {bg_color} !important;
+            border-color: {text_color} !important;
         }}
         .show-more-container [data-testid="stButton"] {{
             width: 100% !important;
