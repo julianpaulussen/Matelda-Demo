@@ -99,19 +99,40 @@ def switch_theme(theme_mode):
         st.error(f"Error switching theme: {e}")
 
 
-def get_current_theme():
-    """Get the current theme configuration from the active config file"""
+def get_current_theme() -> dict:
+    """Get the current (active) theme using Streamlit's runtime options when possible.
+
+    Falls back to reading .streamlit/config.toml and finally to hardcoded defaults.
+    """
+    try:
+        base = st.get_option("theme.base")
+        theme = {
+            "base": base or "light",
+            "primaryColor": st.get_option("theme.primaryColor") or ("#f4b11c"),
+            "backgroundColor": st.get_option("theme.backgroundColor") or ("#0e1117" if base == "dark" else "#e6e6e6"),
+            "secondaryBackgroundColor": st.get_option("theme.secondaryBackgroundColor") or ("#262730" if base == "dark" else "#ffffff"),
+            "textColor": st.get_option("theme.textColor") or ("#fafafa" if base == "dark" else "#002f67"),
+            "font": st.get_option("theme.font") or "monospace",
+        }
+        return theme
+    except Exception:
+        pass
+
     try:
         config_dir = os.path.join(os.path.dirname(__file__), "../.streamlit")
         config_file = os.path.join(config_dir, "config.toml")
-        
         if os.path.exists(config_file):
             with open(config_file, 'r') as f:
                 config = toml.load(f)
-                return config.get('theme', {})
-        else:
-            # Fallback to light theme if no config exists
-            return get_default_theme_config("light")
-    except Exception as e:
-        # Fallback to light theme on error
-        return get_default_theme_config("light")
+                # If [theme.dark] exists and base is dark, prefer that
+                theme = config.get('theme', {})
+                if isinstance(theme, dict) and theme.get('base') == 'dark' and 'dark' in theme:
+                    return theme['dark']
+                if isinstance(theme, dict) and 'dark' in theme:
+                    # strip nested dark for light/base
+                    theme = {k: v for k, v in theme.items() if k != 'dark'}
+                return theme
+    except Exception:
+        pass
+
+    return get_default_theme_config("light")

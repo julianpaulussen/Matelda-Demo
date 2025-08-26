@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 
 from streamlit_swipecards import streamlit_swipecards
 from backend import backend_sample_labeling, backend_label_propagation
-from components import render_sidebar, apply_base_styles, get_datasets_path, render_restart_expander, render_inline_restart_button
+from components import render_sidebar, apply_base_styles, get_datasets_path, render_restart_expander, render_inline_restart_button, get_swipecard_colors
 
 # Page setup
 st.set_page_config(page_title="Labeling", layout="wide")
@@ -102,7 +102,14 @@ if st.session_state.run_quality_folding:
     st.info(
         "Swipe left to mark as error, swipe right to mark as correct.")
 
-    results = streamlit_swipecards(cards=card_data, display_mode="table", view="desktop", key="labeling_cards")
+    results = streamlit_swipecards(
+        cards=card_data, 
+        display_mode="table", 
+        view="desktop", 
+        key="labeling_cards",
+        last_card_message="No more cards to swipe, continue with the Next-button below.",
+        colors=get_swipecard_colors()
+    )
 
     if "labeling_results" not in st.session_state:
         st.session_state.labeling_results = {}

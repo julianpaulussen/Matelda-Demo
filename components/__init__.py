@@ -1,6 +1,6 @@
 # Components package for data-tinder
 from .sidebar import render_sidebar
-from .styling import apply_base_styles, apply_folding_styles
+from .styling import apply_base_styles, apply_folding_styles, get_swipecard_colors
 from .restart import render_restart_expander, render_inline_restart_button
 from .theme_switcher import render_theme_switcher, get_current_theme
 from .utils import (
