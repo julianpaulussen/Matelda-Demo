@@ -39,13 +39,13 @@ h1 {
     height: 24px !important;
     min-height: 24px !important;
     border-radius: 12px !important;
-    background-color: #f0f2f6 !important;
-    border: 1px solid #d1d5db !important;
-    color: #6b7280 !important;
+    background-color: #f4b11c !important;
+    border: 1px solid #f4b11c !important;
+    color: #002f67 !important;
 }
 .small-show-more button:hover {
-    background-color: #e5e7eb !important;
-    border-color: #9ca3af !important;
+    background-color: rgba(244, 177, 28, 0.8) !important;
+    border-color: rgba(244, 177, 28, 0.8) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -113,7 +113,7 @@ datasets_dir = get_datasets_path(dataset)
 def highlight_cell(row_idx, col_name):
     def apply(df):
         return df.style.apply(
-            lambda _: ['background-color: yellow' if i == row_idx else '' for i in range(len(df))],
+            lambda _: ['background-color: #f4b11c' if i == row_idx else '' for i in range(len(df))],
             axis=0,
             subset=pd.IndexSlice[:, [col_name]]
         )

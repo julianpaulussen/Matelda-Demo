@@ -54,10 +54,9 @@ def display_table_with_errors(table_name, error_cells):
         for error in error_cells:
             try:
                 confidence = error["confidence"]
-                # Convert confidence to color intensity (higher confidence = more intense red)
-                color_intensity = int(255 * (1 - confidence))
-                color = f"rgb(255, {color_intensity}, {color_intensity})"
-                df_styles.iloc[error["row"], data.columns.get_loc(error["col"])] = f"background-color: {color}; color: white"
+                # Convert confidence to opacity (higher confidence = more opaque)
+                opacity = confidence
+                df_styles.iloc[error["row"], data.columns.get_loc(error["col"])] = f"background-color: rgba(244, 177, 28, {opacity}); color: white"
             except Exception:
                 continue
         return df_styles

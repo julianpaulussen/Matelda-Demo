@@ -81,6 +81,12 @@ else:
 current_pipeline_name = os.path.basename(current_pipeline_path)
 pipelines_folder = os.path.join(os.path.dirname(__file__), "../pipelines")
 
+def highlight_current(row):
+    if row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time:
+        return ['background-color: #f4b11c'] * len(row)
+    else:
+        return [''] * len(row)
+
 if dataset_configured:
     same_dataset_rows = []
     for pipeline in os.listdir(pipelines_folder):
@@ -128,12 +134,6 @@ if dataset_configured:
         if col in same_dataset_df.columns:
             same_dataset_df[col] = pd.to_numeric(same_dataset_df[col], errors="coerce").round(2)
     same_dataset_df = same_dataset_df.sort_values(by="Time", ascending=False)
-
-    def highlight_current(row):
-        if row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time:
-            return ['background-color: red'] * len(row)
-        else:
-            return [''] * len(row)
 
     styled_same_dataset_df = same_dataset_df.style.apply(highlight_current, axis=1).format({
         "Recall": "{:.2f}",
