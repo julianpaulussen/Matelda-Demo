@@ -5,7 +5,7 @@ import time
 import os
 import json
 from backend import backend_pull_errors
-from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
+from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button, get_current_theme
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
@@ -39,6 +39,18 @@ if "dataset_select" not in st.session_state:
 selected_dataset = st.session_state.dataset_select
 datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
 
+# Get the current theme to extract primary color
+current_theme = get_current_theme()
+primary_color = current_theme.get('primaryColor', '#f4b11c').strip()
+
+# Convert hex color to RGB values for rgba usage
+def hex_to_rgb(hex_color):
+    """Convert hex color to RGB tuple"""
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+primary_rgb = hex_to_rgb(primary_color)
+
 # Function to load and display table with propagated errors
 def display_table_with_errors(table_name, error_cells):
     file_path = os.path.join(datasets_path, table_name, "clean.csv")
@@ -56,7 +68,8 @@ def display_table_with_errors(table_name, error_cells):
                 confidence = error["confidence"]
                 # Convert confidence to opacity (higher confidence = more opaque)
                 opacity = confidence
-                df_styles.iloc[error["row"], data.columns.get_loc(error["col"])] = f"background-color: rgba(244, 177, 28, {opacity}); color: white"
+                r, g, b = primary_rgb
+                df_styles.iloc[error["row"], data.columns.get_loc(error["col"])] = f"background-color: rgba({r}, {g}, {b}, {opacity}); color: white"
             except Exception:
                 continue
         return df_styles
@@ -73,7 +86,7 @@ with st.spinner("🔍 Searching for possible errors in the datasets..."):
     
     # Display tables with propagated errors
     st.markdown("### Detected Errors")
-    st.markdown("The intensity of the red highlighting indicates the confidence level of the error detection (darker = higher confidence)")
+    st.markdown("The intensity of the highlighting indicates the confidence level of the error detection (darker = higher confidence)")
     
     for table, errors in propagated_errors.items():
         with st.expander(f"📊 {table} ({len(errors)} potential errors)"):

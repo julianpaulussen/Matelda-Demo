@@ -4,6 +4,47 @@ Theme switcher component for toggling between light and dark themes
 import streamlit as st
 import shutil
 import os
+import toml
+
+
+def load_theme_config(theme_mode):
+    """Load theme configuration from theme-specific file"""
+    try:
+        config_dir = os.path.join(os.path.dirname(__file__), "../.streamlit")
+        config_file = os.path.join(config_dir, f"config_{theme_mode}.toml")
+        
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                config = toml.load(f)
+                return config.get('theme', {})
+        else:
+            # Fallback to default values
+            return get_default_theme_config(theme_mode)
+    except Exception as e:
+        st.error(f"Error loading theme config: {e}")
+        return get_default_theme_config(theme_mode)
+
+
+def get_default_theme_config(theme_mode):
+    """Get default theme configuration as fallback"""
+    if theme_mode == "dark":
+        return {
+            "base": "dark",
+            "primaryColor": "#f4b11c",
+            "backgroundColor": "#0e1117",
+            "secondaryBackgroundColor": "#262730",
+            "textColor": "#fafafa",
+            "font": "monospace"
+        }
+    else:  # light theme
+        return {
+            "base": "light",
+            "primaryColor": "#f4b11c",
+            "backgroundColor": "#e6e6e6",
+            "secondaryBackgroundColor": "#ffffff",
+            "textColor": "#002f67",
+            "font": "monospace"
+        }
 
 
 def render_theme_switcher():
@@ -40,34 +81,37 @@ def switch_theme(theme_mode):
     """Switch between light and dark themes by copying the appropriate config file"""
     try:
         config_dir = os.path.join(os.path.dirname(__file__), "../.streamlit")
-        
-        if theme_mode == "dark":
-            source_config = os.path.join(config_dir, "config_dark.toml")
-            target_config = os.path.join(config_dir, "config.toml")
-        else:
-            # For light theme, we'll create a proper light config
-            target_config = os.path.join(config_dir, "config.toml")
-            light_config_content = """[theme]
-base = "light"
-primaryColor = "#002f67"
-backgroundColor = "#e6e6e6"
-secondaryBackgroundColor = "#ffffff"
-textColor = "#002f67"
-font = "monospace"
-"""
-            with open(target_config, 'w') as f:
-                f.write(light_config_content)
-            return
+        source_config = os.path.join(config_dir, f"config_{theme_mode}.toml")
+        target_config = os.path.join(config_dir, "config.toml")
         
         if os.path.exists(source_config):
+            # Copy the theme-specific config file
             shutil.copy2(source_config, target_config)
         else:
-            st.error(f"Theme config file not found: {source_config}")
+            # If theme file doesn't exist, create it dynamically
+            theme_config = {
+                "theme": get_default_theme_config(theme_mode)
+            }
+            with open(target_config, 'w') as f:
+                toml.dump(theme_config, f)
             
     except Exception as e:
         st.error(f"Error switching theme: {e}")
 
 
 def get_current_theme():
-    """Get the current theme mode"""
-    return st.session_state.get("current_theme", "light")
+    """Get the current theme configuration from the active config file"""
+    try:
+        config_dir = os.path.join(os.path.dirname(__file__), "../.streamlit")
+        config_file = os.path.join(config_dir, "config.toml")
+        
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                config = toml.load(f)
+                return config.get('theme', {})
+        else:
+            # Fallback to light theme if no config exists
+            return get_default_theme_config("light")
+    except Exception as e:
+        # Fallback to light theme on error
+        return get_default_theme_config("light")

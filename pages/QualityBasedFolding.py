@@ -24,29 +24,41 @@ current_theme = get_current_theme()
 apply_base_styles(current_theme)
 apply_folding_styles(current_theme)
 
+# Get theme colors for dynamic styling
+primary_color = current_theme.get('primaryColor', '#f4b11c').strip()
+text_color = current_theme.get('textColor', '#002f67').strip()
+
+# Convert hex color to RGB for rgba usage
+def hex_to_rgb(hex_color):
+    """Convert hex color to RGB tuple"""
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+primary_rgb = hex_to_rgb(primary_color)
+
 # Custom CSS for small show more button and reduced header spacing
-st.markdown("""
+st.markdown(f"""
 <style>
-.main .block-container {
+.main .block-container {{
     padding-top: 1rem !important;
-}
-h1 {
+}}
+h1 {{
     margin-bottom: 0.5rem !important;
-}
-.small-show-more button {
+}}
+.small-show-more button {{
     font-size: 10px !important;
     padding: 2px 8px !important;
     height: 24px !important;
     min-height: 24px !important;
     border-radius: 12px !important;
-    background-color: #f4b11c !important;
-    border: 1px solid #f4b11c !important;
-    color: #002f67 !important;
-}
-.small-show-more button:hover {
-    background-color: rgba(244, 177, 28, 0.8) !important;
-    border-color: rgba(244, 177, 28, 0.8) !important;
-}
+    background-color: {primary_color} !important;
+    border: 1px solid {primary_color} !important;
+    color: {text_color} !important;
+}}
+.small-show-more button:hover {{
+    background-color: rgba({primary_rgb[0]}, {primary_rgb[1]}, {primary_rgb[2]}, 0.8) !important;
+    border-color: rgba({primary_rgb[0]}, {primary_rgb[1]}, {primary_rgb[2]}, 0.8) !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -110,10 +122,14 @@ if "dataset_select" not in st.session_state:
 dataset = st.session_state.dataset_select
 datasets_dir = get_datasets_path(dataset)
 
+# Get the current theme to extract primary color
+current_theme = get_current_theme()
+primary_color = current_theme.get('primaryColor', '#f4b11c').strip()
+
 def highlight_cell(row_idx, col_name):
     def apply(df):
         return df.style.apply(
-            lambda _: ['background-color: #f4b11c' if i == row_idx else '' for i in range(len(df))],
+            lambda _: [f'background-color: {primary_color}' if i == row_idx else '' for i in range(len(df))],
             axis=0,
             subset=pd.IndexSlice[:, [col_name]]
         )

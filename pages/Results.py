@@ -5,7 +5,7 @@ import json
 import datetime
 import pandas as pd
 import urllib.parse
-from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
+from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button, get_current_theme
 from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles
@@ -81,9 +81,13 @@ else:
 current_pipeline_name = os.path.basename(current_pipeline_path)
 pipelines_folder = os.path.join(os.path.dirname(__file__), "../pipelines")
 
+# Get the current theme to extract primary color
+current_theme = get_current_theme()
+primary_color = current_theme.get('primaryColor', '#f4b11c').strip()
+
 def highlight_current(row):
     if row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time:
-        return ['background-color: #f4b11c'] * len(row)
+        return [f'background-color: {primary_color}'] * len(row)
     else:
         return [''] * len(row)
 
