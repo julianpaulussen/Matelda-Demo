@@ -18,16 +18,21 @@ from components import (
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
-st.title("Quality Based Folding")
 
 # Apply styles with current theme
 current_theme = get_current_theme()
 apply_base_styles(current_theme)
 apply_folding_styles(current_theme)
 
-# Custom CSS for small show more button
+# Custom CSS for small show more button and reduced header spacing
 st.markdown("""
 <style>
+.main .block-container {
+    padding-top: 1rem !important;
+}
+h1 {
+    margin-bottom: 0.5rem !important;
+}
 .small-show-more button {
     font-size: 10px !important;
     padding: 2px 8px !important;
@@ -44,6 +49,8 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
+st.title("Quality Based Folding")
 
 # Sidebar navigation
 render_sidebar()
@@ -141,7 +148,6 @@ for key, val in defaults.items():
         st.session_state[key] = val
 
 # Strategies selection (pre-run)
-st.markdown("---")
 st.subheader("Error Detection Strategies")
 strategies = get_available_strategies()
 preselected = set(st.session_state.get("selected_strategies", []))
