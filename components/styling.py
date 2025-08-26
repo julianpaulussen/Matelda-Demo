@@ -6,38 +6,109 @@ import toml
 import os
 
 
-def load_theme_config(theme_mode=None):
-    """Load theme configuration from .streamlit/config.toml or dark variant"""
+def load_theme_config(theme_mode: str | None = None) -> dict:
+    """Load the active theme configuration.
+
+    Priority:
+    1) Respect Streamlit's active theme via st.get_option("theme.*").
+    2) If unavailable, read .streamlit/config.toml (and [theme.dark] when active).
+    3) Fallback to hardcoded defaults.
+    """
+    # 1) Try to read the live active theme from Streamlit options
     try:
-        if theme_mode == "dark":
-            config_path = os.path.join(os.path.dirname(__file__), "../.streamlit/config_dark.toml")
-        else:
-            config_path = os.path.join(os.path.dirname(__file__), "../.streamlit/config.toml")
-        
+        active_base = st.get_option("theme.base")
+        primary = st.get_option("theme.primaryColor")
+        bg = st.get_option("theme.backgroundColor")
+        secondary_bg = st.get_option("theme.secondaryBackgroundColor")
+        text = st.get_option("theme.textColor")
+        font = st.get_option("theme.font")
+
+        if any(v is not None for v in (active_base, primary, bg, secondary_bg, text, font)):
+            # Build from the available options (falling back if some are None)
+            return {
+                'base': active_base or ('dark' if theme_mode == 'dark' else 'light'),
+                'primaryColor': primary or ('#f4b11c'),
+                'backgroundColor': bg or ('#0e1117' if (active_base or theme_mode) == 'dark' else '#e6e6e6'),
+                'secondaryBackgroundColor': secondary_bg or ('#262730' if (active_base or theme_mode) == 'dark' else '#ffffff'),
+                'textColor': text or ('#fafafa' if (active_base or theme_mode) == 'dark' else '#002f67'),
+                'font': font or 'monospace',
+            }
+    except Exception:
+        # Ignore and try filesystem config
+        pass
+
+    # 2) Fallback to config files
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), "../.streamlit/config.toml")
         with open(config_path, 'r') as f:
-            config = toml.load(f)
-        return config.get('theme', {})
+            cfg = toml.load(f)
+
+        theme = cfg.get('theme', {})
+        # Handle [theme.dark] if present and either explicitly requested or active via base
+        requested = (theme_mode == 'dark') or (theme.get('base') == 'dark')
+        dark_variant = None
+        if isinstance(theme, dict):
+            dark_variant = theme.get('dark')  # from [theme.dark]
+
+        if requested and isinstance(dark_variant, dict):
+            return dark_variant
+
+        # Remove nested dark variant key for the light/base theme
+        if isinstance(theme, dict) and 'dark' in theme:
+            theme = {k: v for k, v in theme.items() if k != 'dark'}
+        return theme
     except (FileNotFoundError, toml.TomlDecodeError):
-        # Fallback theme values if config.toml is not found or invalid
-        if theme_mode == "dark":
-            return {
-                'primaryColor': '#4CAF50',
-                'backgroundColor': '#1a1a1a', 
-                'secondaryBackgroundColor': '#2d2d2d',
-                'textColor': '#ffffff',
-                'font': 'monospace'
-            }
-        else:
-            return {
-                'primaryColor': '#002f67',
-                'backgroundColor': '#e6e6e6', 
-                'secondaryBackgroundColor': '#ffffff',
-                'textColor': '#002f67',
-                'font': 'monospace'
-            }
+        pass
+
+    # 3) Hardcoded defaults
+    if theme_mode == 'dark':
+        return {
+            'base': 'dark',
+            'primaryColor': '#f4b11c',
+            'backgroundColor': '#0e1117',
+            'secondaryBackgroundColor': '#262730',
+            'textColor': '#fafafa',
+            'font': 'monospace'
+        }
+    else:
+        return {
+            'base': 'light',
+            'primaryColor': '#f4b11c',
+            'backgroundColor': '#e6e6e6',
+            'secondaryBackgroundColor': '#ffffff',
+            'textColor': '#002f67',
+            'font': 'monospace'
+        }
 
 
-def apply_base_styles(theme_mode=None):
+def get_swipecard_colors(theme_mode: str | None = None) -> dict:
+    """Get color configuration for streamlit_swipecards based on current theme."""
+    theme = load_theme_config(theme_mode)
+    
+    # Determine if we're in dark mode
+    is_dark = theme.get('base') == 'dark' or theme.get('backgroundColor') in ['#0e1117', '#262730']
+    
+    # Button background color based on theme mode
+    button_bg = "#262730" if is_dark else "#E6E6E6"
+    
+    return {
+        # All buttons use the same background color
+        "like_bg": button_bg,
+        "like_fg": theme.get('textColor', '#fafafa' if is_dark else '#002f67'),
+        "pass_bg": button_bg,
+        "pass_fg": theme.get('textColor', '#fafafa' if is_dark else '#002f67'),
+        "back_bg": button_bg,
+        "back_fg": theme.get('textColor', '#fafafa' if is_dark else '#002f67'),
+        "btn_border": theme.get('textColor', '#fafafa' if is_dark else '#002f67'),
+        # Card and background colors from theme
+        "card_bg": theme.get('secondaryBackgroundColor', '#262730' if is_dark else '#ffffff'),
+        "background_color": theme.get('backgroundColor', '#0e1117' if is_dark else '#e6e6e6'),
+        "secondary_background_color": theme.get('secondaryBackgroundColor', '#262730' if is_dark else '#ffffff'),
+        "text_color": theme.get('textColor', '#fafafa' if is_dark else '#002f67'),
+    }
+
+
+def apply_base_styles(theme_mode: str | None = None):
     """Apply base styles that are common across all pages"""
     theme = load_theme_config(theme_mode)
     
@@ -103,7 +174,7 @@ def apply_base_styles(theme_mode=None):
             background-color: {secondary_bg} !important;
           }}
           
-          /* Buttons and interactive elements - use theme colors instead of primary */
+          /* Buttons and interactive elements */
           .stButton > button, [data-testid="baseButton-primary"] {{
             background-color: {secondary_bg} !important;
             color: {text_color} !important;
@@ -130,17 +201,28 @@ def apply_base_styles(theme_mode=None):
             color: {text_color} !important;
           }}
           
-          /* Swipe card buttons - use main backgroundColor */
-          .swipe-button, .stButton.swipe-card > button {{
-            background-color: {bg_color} !important;
-            color: {text_color} !important;
+          /* Swipe card buttons - prefer theme backgroundColor */
+          /* These selectors are intentionally broad to catch custom classes */
+          [data-testid^="swipecards"],
+          .swipecards, .swipe-card, .swipe-button {{
+            --swipe-bg: {bg_color};
+            --swipe-fg: {text_color};
+          }}
+          [data-testid^="swipecards"] button,
+          .swipecards button,
+          .swipe-card button,
+          .swipe-button {{
+            background-color: var(--swipe-bg) !important;
+            color: var(--swipe-fg) !important;
             border: 2px solid {text_color}66 !important;
             border-radius: 8px !important;
             font-family: {font} !important;
             font-weight: 600 !important;
           }}
-          
-          .swipe-button:hover, .stButton.swipe-card > button:hover {{
+          [data-testid^="swipecards"] button:hover,
+          .swipecards button:hover,
+          .swipe-card button:hover,
+          .swipe-button:hover {{
             background-color: {secondary_bg} !important;
             border-color: {text_color} !important;
             transform: scale(1.02) !important;

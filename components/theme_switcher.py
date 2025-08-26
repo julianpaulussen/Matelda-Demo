@@ -1,5 +1,6 @@
 """
-Theme switcher component for toggling between light and dark themes
+Theme switcher component - maintains light theme functionality without showing UI
+Always uses custom light theme regardless of device dark mode settings
 """
 import streamlit as st
 import shutil
@@ -48,33 +49,21 @@ def get_default_theme_config(theme_mode):
 
 
 def render_theme_switcher():
-    """Render a theme switcher in the sidebar"""
+    """Initialize and maintain light theme without showing UI"""
     
-    # Initialize theme state if not exists
+    # Always force light theme regardless of device settings
     if "current_theme" not in st.session_state:
         st.session_state.current_theme = "light"
+        # Ensure light theme is applied
+        switch_theme("light")
     
-    st.sidebar.markdown("---")
-    #st.sidebar.subheader("Theme")
-    
-    # Theme selection
-    theme_options = ["Light", "Dark"]
-    current_theme_display = "Light" if st.session_state.current_theme == "light" else "Dark"
-    
-    selected_theme = st.sidebar.selectbox(
-        "Choose theme:",
-        options=theme_options,
-        index=theme_options.index(current_theme_display),
-        key="theme_selector"
-    )
-    
-    new_theme = "light" if selected_theme == "Light" else "dark"
-    
-    # If theme changed, update the config file
-    if new_theme != st.session_state.current_theme:
-        st.session_state.current_theme = new_theme
-        switch_theme(new_theme)
+    # If somehow the theme is not light, force it back to light
+    if st.session_state.current_theme != "light":
+        st.session_state.current_theme = "light"
+        switch_theme("light")
         st.rerun()
+    
+    # No UI is rendered - theme switcher is hidden but functionality preserved
 
 
 def switch_theme(theme_mode):
@@ -100,39 +89,9 @@ def switch_theme(theme_mode):
 
 
 def get_current_theme() -> dict:
-    """Get the current (active) theme using Streamlit's runtime options when possible.
-
-    Falls back to reading .streamlit/config.toml and finally to hardcoded defaults.
+    """Get the current (active) theme - always returns light theme configuration.
+    
+    This ensures the app always uses light theme regardless of device settings.
     """
-    try:
-        base = st.get_option("theme.base")
-        theme = {
-            "base": base or "light",
-            "primaryColor": st.get_option("theme.primaryColor") or ("#f4b11c"),
-            "backgroundColor": st.get_option("theme.backgroundColor") or ("#0e1117" if base == "dark" else "#e6e6e6"),
-            "secondaryBackgroundColor": st.get_option("theme.secondaryBackgroundColor") or ("#262730" if base == "dark" else "#ffffff"),
-            "textColor": st.get_option("theme.textColor") or ("#fafafa" if base == "dark" else "#002f67"),
-            "font": st.get_option("theme.font") or "monospace",
-        }
-        return theme
-    except Exception:
-        pass
-
-    try:
-        config_dir = os.path.join(os.path.dirname(__file__), "../.streamlit")
-        config_file = os.path.join(config_dir, "config.toml")
-        if os.path.exists(config_file):
-            with open(config_file, 'r') as f:
-                config = toml.load(f)
-                # If [theme.dark] exists and base is dark, prefer that
-                theme = config.get('theme', {})
-                if isinstance(theme, dict) and theme.get('base') == 'dark' and 'dark' in theme:
-                    return theme['dark']
-                if isinstance(theme, dict) and 'dark' in theme:
-                    # strip nested dark for light/base
-                    theme = {k: v for k, v in theme.items() if k != 'dark'}
-                return theme
-    except Exception:
-        pass
-
+    # Always return light theme configuration
     return get_default_theme_config("light")
