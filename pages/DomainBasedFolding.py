@@ -36,7 +36,7 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
 
 # If we still don't have a dataset configured, show a warning and redirect option
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Dataset not configured.")
+    st.warning("⚠️ Pipeline not configured.")
     if st.button("Go back to Configurations"):
         st.switch_page("pages/Configurations.py")
     st.stop()

@@ -17,7 +17,6 @@ apply_base_styles()
 render_sidebar()
 
 st.title("Results")
-st.write("### Model Performance Metrics")
 
 def load_config(path):
     if os.path.exists(path):
@@ -48,9 +47,12 @@ if "pipeline_path" in st.session_state:
         precision_score = 0
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 else:
-    st.error("No pipeline selected!")
+    st.warning("⚠️ Pipeline not configured.")
+    if st.button("Go back to Configurations"):
+        st.switch_page("pages/Configurations.py")
     st.stop()
 
+st.write("### Model Performance Metrics")
 col1, col2, col3, col4 = st.columns(4)
 
 # -----------------------------------------------------------------------------
@@ -80,7 +82,7 @@ if dataset_configured:
         st.metric(label="Labeling Budget", value=str(current_labeling_budget))
 else:
     with col1:
-        st.warning("⚠️ Dataset not configured.")
+        st.warning("⚠️ Pipeline not configured.")
         if st.button("Go back to Configurations"):
             st.switch_page("pages/Configurations.py")
     col2.empty()
