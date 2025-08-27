@@ -11,6 +11,7 @@ import json
 import os
 import uuid
 from typing import Any, Dict, Iterable, Optional
+import hashlib
 
 import streamlit as st
 
@@ -160,3 +161,19 @@ def clear_persisted_session() -> None:
     finally:
         # Remove sid from URL to force a clean session on next run
         _clear_sid_param()
+
+
+def get_session_hash(length: int = 6) -> str:
+    """Return a short, stable hash for the current Streamlit tab session.
+
+    Uses the per-tab sid (stored in URL query params) and returns the first
+    `length` hex chars of a SHA1 digest, defaulting to 6.
+    """
+    try:
+        sid = _get_or_create_sid()
+        digest = hashlib.sha1(str(sid).encode("utf-8")).hexdigest()
+        n = max(1, int(length))
+        return digest[:n]
+    except Exception:
+        # Fallback to a random-like short value if anything goes wrong
+        return uuid.uuid4().hex[:max(1, int(length))]
