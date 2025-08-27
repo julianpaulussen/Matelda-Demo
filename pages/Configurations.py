@@ -66,8 +66,12 @@ def load_pipeline_config_ui():
     st.session_state.budget_slider = min(int(_cfg_budget), 100)
     st.session_state.budget_input = int(_cfg_budget)
     st.session_state.preconfigured_dataset = pipeline_dataset
-    # Load previously selected strategies if available
-    st.session_state.selected_strategies = pipeline_config.get("selected_strategies", [])
+    # Load previously selected strategies if available, default to all strategies if none selected
+    saved_strategies = pipeline_config.get("selected_strategies", [])
+    if not saved_strategies:
+        # If no strategies were previously selected, default to all strategies
+        saved_strategies = get_available_strategies()
+    st.session_state.selected_strategies = saved_strategies
 
 
 def sync_slider_to_input():
@@ -138,6 +142,9 @@ if pipeline_choice == "Use Existing Pipeline":
     st.markdown("---")
     st.subheader("Error Detection Strategies")
     strategies = get_available_strategies()
+    # Preselect all strategies by default if none are selected
+    if "selected_strategies" not in st.session_state or not st.session_state.selected_strategies:
+        st.session_state.selected_strategies = strategies.copy()
     preselected = set(st.session_state.get("selected_strategies", []))
     selected = []
     for s in strategies:
@@ -294,6 +301,9 @@ else:
     st.markdown("---")
     st.subheader("Error Detection Strategies")
     strategies = get_available_strategies()
+    # Preselect all strategies by default if none are selected
+    if "selected_strategies" not in st.session_state or not st.session_state.selected_strategies:
+        st.session_state.selected_strategies = strategies.copy()
     preselected = set(st.session_state.get("selected_strategies", []))
     selected = []
     for s in strategies:
