@@ -149,6 +149,41 @@ if pipeline_choice == "Use Existing Pipeline":
         if checked:
             selected.append(s)
     st.session_state.selected_strategies = selected
+    
+    # ----------------------------
+    # Pipeline Name (Editable)
+    # ----------------------------
+    st.markdown("---")
+    st.subheader("Pipeline Name")
+
+    def suggest_copy_name(original: str, all_dirs_path: str) -> str:
+        """Suggest a unique copy name by appending '-copy-[number]'.
+
+        If original already ends with '-copy-N', start from N+1; otherwise start from 1.
+        """
+        base = original
+        start_n = 1
+        if "-copy-" in original:
+            parts = original.rsplit("-copy-", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                base = parts[0]
+                start_n = int(parts[1]) + 1
+        n = start_n
+        while True:
+            candidate = f"{base}-copy-{n}"
+            if not os.path.exists(os.path.join(all_dirs_path, candidate)):
+                return candidate
+            n += 1
+
+    current_name = st.session_state.get("selected_pipeline", placeholder)
+    if current_name != placeholder:
+        # Show the current pipeline name as the editable default
+        st.text_input(
+            "Pipeline name:",
+            value=current_name,
+            key="copy_pipeline_name",
+            help="Leaving unchanged will ask to overwrite on Next."
+        )
 else:
     # ----------------------------
     # Create New Pipeline: Dataset & Budget Selection
@@ -375,47 +410,123 @@ with nav_cols[0]:
 if nav_cols[1].button("Back", key="config_back", use_container_width=True):
     st.switch_page("app.py")
 
-# Next: Save and Continue
+
 if nav_cols[2].button("Next", key="config_next", use_container_width=True):
     if pipeline_choice == "Use Existing Pipeline":
         # Check if the placeholder is still selected
         if st.session_state.selected_pipeline == placeholder:
             st.warning("Please select an existing pipeline before continuing.")
         else:
-            pipeline_folder = os.path.join(pipelines_folder, st.session_state.selected_pipeline)
-            st.session_state.pipeline_path = pipeline_folder
-            
-            # Load existing config and detect changes
-            existing_cfg = load_pipeline_config(pipeline_folder)
-            new_budget = int(st.session_state.get("budget_input", labeling_budget))
-            new_dataset = st.session_state.get("dataset_select")
-            new_strategies = st.session_state.get("selected_strategies", [])
+            current_name = st.session_state.selected_pipeline
+            entered_name = st.session_state.get("copy_pipeline_name", current_name)
 
-            # Only consider strategies as a change if the pipeline already had a non-empty selection stored.
-            existing_strats = existing_cfg.get("selected_strategies", [])
-            strategies_changed = bool(existing_strats) and (
-                sorted(existing_strats) != sorted(new_strategies)
-            )
-            changed = (
-                int(existing_cfg.get("labeling_budget", -1)) != new_budget or
-                existing_cfg.get("selected_dataset") != new_dataset or
-                strategies_changed
-            )
+            if entered_name != current_name:
+                # User wants to save under a new name -> must be unique
+                new_folder_path = os.path.join(pipelines_folder, entered_name)
+                if os.path.exists(new_folder_path):
+                    st.warning("A pipeline with that name already exists. Please choose a different name.")
+                else:
+                    # Copy the entire pipeline folder to preserve results
+                    src_path = os.path.join(pipelines_folder, current_name)
+                    try:
+                        shutil.copytree(src_path, new_folder_path)
+                    except Exception as e:
+                        st.error(f"Failed to create pipeline copy: {e}")
+                    else:
+                        st.session_state.selected_pipeline = entered_name
+                        st.session_state.pipeline_path = new_folder_path
 
-            # Update and save config
-            config_to_save = {**existing_cfg}
-            config_to_save["labeling_budget"] = new_budget
-            config_to_save["selected_dataset"] = new_dataset
-            config_to_save["selected_strategies"] = new_strategies
-            save_pipeline_config(pipeline_folder, config_to_save)
+                        # Save current selections into the new pipeline config; name change is not a dirty action
+                        config_to_save = load_pipeline_config(new_folder_path)
+                        config_to_save["labeling_budget"] = int(st.session_state.get("budget_input", labeling_budget))
+                        config_to_save["selected_dataset"] = st.session_state.get("dataset_select")
+                        config_to_save["selected_strategies"] = st.session_state.get("selected_strategies", [])
+                        save_pipeline_config(new_folder_path, config_to_save)
 
-            # Mark pipeline dirty only if user actually changed inputs
-            if changed:
-                mark_pipeline_dirty()
+                        mark_pipeline_clean()
+                        st.success(f"Pipeline copied to: {entered_name}")
+                        st.switch_page("pages/DomainBasedFolding.py")
             else:
-                mark_pipeline_clean()
-            st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
-            st.switch_page("pages/DomainBasedFolding.py")
+                # Name unchanged -> open dialog to choose overwrite or new name
+                @st.dialog("Continue With Existing Name?", width="small")
+                def _confirm_overwrite_dialog():
+                    st.write(
+                        "You are about to continue using the same pipeline name. "
+                        "Do you want to overwrite the existing pipeline or create a copy with a new name?"
+                    )
+
+                    # New name input first, spanning full width
+                    suggested = suggest_copy_name(current_name, pipelines_folder)
+                    new_name = st.text_input(
+                        "New pipeline name:",
+                        value=suggested,
+                        key="dialog_new_pipeline_name",
+                    )
+
+                    # Side-by-side buttons on the same row
+                    col_overwrite, col_copy = st.columns([1, 1])
+
+                    with col_overwrite:
+                        if st.button("Overwrite existing", key="confirm_overwrite", use_container_width=True):
+                            pipeline_folder = os.path.join(pipelines_folder, current_name)
+                            st.session_state.pipeline_path = pipeline_folder
+
+                            existing_cfg = load_pipeline_config(pipeline_folder)
+                            new_budget = int(st.session_state.get("budget_input", 10))
+                            new_dataset = st.session_state.get("dataset_select")
+                            new_strategies = st.session_state.get("selected_strategies", [])
+
+                            existing_strats = existing_cfg.get("selected_strategies", [])
+                            strategies_changed = bool(existing_strats) and (
+                                sorted(existing_strats) != sorted(new_strategies)
+                            )
+                            changed = (
+                                int(existing_cfg.get("labeling_budget", -1)) != new_budget or
+                                existing_cfg.get("selected_dataset") != new_dataset or
+                                strategies_changed
+                            )
+
+                            config_to_save = {**existing_cfg}
+                            config_to_save["labeling_budget"] = new_budget
+                            config_to_save["selected_dataset"] = new_dataset
+                            config_to_save["selected_strategies"] = new_strategies
+                            save_pipeline_config(pipeline_folder, config_to_save)
+
+                            if changed:
+                                mark_pipeline_dirty()
+                            else:
+                                mark_pipeline_clean()
+                            st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
+                            st.switch_page("pages/DomainBasedFolding.py")
+
+                    with col_copy:
+                        if st.button("Create copy and continue", key="confirm_create_copy", use_container_width=True):
+                            final_name = new_name or ""
+                            if not final_name.strip():
+                                st.warning("Please enter a new pipeline name.")
+                            else:
+                                new_path = os.path.join(pipelines_folder, final_name)
+                                if os.path.exists(new_path):
+                                    st.warning("A pipeline with that name already exists. Please choose a different name.")
+                                else:
+                                    src_path = os.path.join(pipelines_folder, current_name)
+                                    try:
+                                        shutil.copytree(src_path, new_path)
+                                    except Exception as e:
+                                        st.error(f"Failed to create pipeline copy: {e}")
+                                    else:
+                                        st.session_state.selected_pipeline = final_name
+                                        st.session_state.pipeline_path = new_path
+                                        config_to_save = load_pipeline_config(new_path)
+                                        config_to_save["labeling_budget"] = int(st.session_state.get("budget_input", 10))
+                                        config_to_save["selected_dataset"] = st.session_state.get("dataset_select")
+                                        config_to_save["selected_strategies"] = st.session_state.get("selected_strategies", [])
+                                        save_pipeline_config(new_path, config_to_save)
+                                        mark_pipeline_clean()
+                                        st.success(f"Pipeline copied to: {final_name}")
+                                        st.switch_page("pages/DomainBasedFolding.py")
+
+                _confirm_overwrite_dialog()
     else:
         # Create New Pipeline: Check for existing folder name
         if not new_pipeline_name:
