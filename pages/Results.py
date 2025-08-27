@@ -150,18 +150,6 @@ if dataset_configured:
     st.markdown(f"#### Result Comparison (Dataset: {current_dataset})")
     st.write("_(Click on column headers to sort the table.)_")
     st.dataframe(styled_same_dataset_df)
-    
-    # Interactive graph for same dataset comparison
-    if not same_dataset_df.empty and len(same_dataset_df) > 1:        
-        # Create a chart showing metrics for each pipeline
-        chart_data = same_dataset_df.set_index('Pipeline Name')[['Recall', 'F1', 'Precision']]
-        
-        # Display as line chart
-        # st.line_chart(chart_data)
-        
-        # Also show as bar chart for better comparison
-        st.markdown("**Pipeline Performance Comparison**")
-        st.bar_chart(chart_data)
 
 # ---------------- ALL DATASETS ----------------
 all_rows = []
@@ -226,24 +214,8 @@ st.write("_(Click on column headers to sort the table.)_")
 st.dataframe(styled_all_df)
 
 # Interactive graph for all datasets comparison
-if not all_df.empty and len(all_df) > 1:
-    
-    # Show pipeline comparison
-    st.markdown("**Pipeline Performance Comparison**")
-    
-    # Create a chart showing performance by pipeline
-    pipeline_chart_data = all_df.pivot_table(
-        index='Pipeline Name', 
-        values=['Recall', 'F1', 'Precision'], 
-        aggfunc='mean'
-    )
-    
-    st.bar_chart(pipeline_chart_data)
-
-    st.markdown("---")
-    
+if not all_df.empty and len(all_df) > 1:    
     # Show performance vs labeling budget
-
     st.markdown("**Performance vs Labeling Budget**")
     budget_data = all_df.groupby('Labeling Budget')[['Recall', 'F1', 'Precision']].mean()
     st.line_chart(budget_data)
