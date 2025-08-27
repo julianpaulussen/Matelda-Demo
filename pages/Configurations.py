@@ -14,6 +14,7 @@ from components import (
     render_inline_restart_button,
     get_current_theme,
 )
+from components.utils import mark_pipeline_dirty, mark_pipeline_clean
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Configurations", layout="wide")
@@ -384,14 +385,35 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
             pipeline_folder = os.path.join(pipelines_folder, st.session_state.selected_pipeline)
             st.session_state.pipeline_path = pipeline_folder
             
-            # Load existing config and update it
-            config_to_save = load_pipeline_config(pipeline_folder)
-            config_to_save["labeling_budget"] = st.session_state.get("budget_input", labeling_budget)
-            config_to_save["selected_dataset"] = st.session_state.get("dataset_select")
-            config_to_save["selected_strategies"] = st.session_state.get("selected_strategies", [])
-            
-            # Save updated config
+            # Load existing config and detect changes
+            existing_cfg = load_pipeline_config(pipeline_folder)
+            new_budget = int(st.session_state.get("budget_input", labeling_budget))
+            new_dataset = st.session_state.get("dataset_select")
+            new_strategies = st.session_state.get("selected_strategies", [])
+
+            # Only consider strategies as a change if the pipeline already had a non-empty selection stored.
+            existing_strats = existing_cfg.get("selected_strategies", [])
+            strategies_changed = bool(existing_strats) and (
+                sorted(existing_strats) != sorted(new_strategies)
+            )
+            changed = (
+                int(existing_cfg.get("labeling_budget", -1)) != new_budget or
+                existing_cfg.get("selected_dataset") != new_dataset or
+                strategies_changed
+            )
+
+            # Update and save config
+            config_to_save = {**existing_cfg}
+            config_to_save["labeling_budget"] = new_budget
+            config_to_save["selected_dataset"] = new_dataset
+            config_to_save["selected_strategies"] = new_strategies
             save_pipeline_config(pipeline_folder, config_to_save)
+
+            # Mark pipeline dirty only if user actually changed inputs
+            if changed:
+                mark_pipeline_dirty()
+            else:
+                mark_pipeline_clean()
             st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
             st.switch_page("pages/DomainBasedFolding.py")
     else:
@@ -412,4 +434,6 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
             }
             save_config_to_json(config_to_save, pipeline_folder)
             st.success(f"New pipeline created and configurations saved in {pipeline_folder}!")
+            # New pipeline starts in a clean state
+            mark_pipeline_clean()
             st.switch_page("pages/DomainBasedFolding.py")

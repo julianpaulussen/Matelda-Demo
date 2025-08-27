@@ -4,6 +4,7 @@ import json
 import time
 import random
 from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
+# Removed: do not flip pipeline clean state from this page
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Propagated Errors", layout="wide")

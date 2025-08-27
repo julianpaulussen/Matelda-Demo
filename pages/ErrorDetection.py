@@ -6,10 +6,15 @@ import os
 import json
 from backend import backend_pull_errors
 from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button, get_current_theme
+from components.utils import is_pipeline_dirty
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
 st.title("Error Detection")
+
+# If pipeline has been modified, inform that shown errors may be from a previous run
+# if is_pipeline_dirty():
+#     st.info("Pipeline changed earlier in this session. Showing the last saved detected errors until you re-run labeling/propagation.")
 
 # Apply base styles
 apply_base_styles()

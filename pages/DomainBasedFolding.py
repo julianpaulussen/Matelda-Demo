@@ -12,6 +12,7 @@ from components import (
     render_inline_restart_button,
     update_domain_folds_in_config,
 )
+from components.utils import mark_pipeline_dirty
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
@@ -96,6 +97,8 @@ if st.button("▶️ Run Domain Based Folding"):
                 update_domain_folds_in_config(st.session_state.pipeline_path, st.session_state.table_locations)
             except Exception:
                 pass
+        # Domain folds changed – mark pipeline as dirty (results/metrics outdated)
+        mark_pipeline_dirty()
         time.sleep(2)  # Keep a small delay for UX
     st.session_state.run_folding = True
 
@@ -153,6 +156,7 @@ if st.session_state.get("run_folding"):
                 )
                 if new_location != st.session_state.table_locations[table]:
                     st.session_state.table_locations[table] = new_location
+                    mark_pipeline_dirty()
                     st.rerun()
             if st.session_state.global_split_mode:
                 split_selected = table_cols[1].checkbox("Select table", key=f"split_{fold_name}_{table}", label_visibility="hidden")
@@ -178,6 +182,7 @@ if st.session_state.get("run_folding"):
                     st.session_state.table_locations[table] = target_fold
             st.session_state.selected_folds = []
             st.session_state.merge_mode = False
+            mark_pipeline_dirty()
             st.rerun()
 
     # Global Confirm Split: if split mode is active and at least one table is selected.
@@ -204,6 +209,7 @@ if st.session_state.get("run_folding"):
                                 st.session_state.table_locations[t] = new_fold_name
                 st.session_state.global_split_mode = False
                 st.session_state.selected_split_tables = {}
+                mark_pipeline_dirty()
                 st.rerun()
             st.markdown("---")
 

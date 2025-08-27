@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 from streamlit_swipecards import streamlit_swipecards
 from backend import backend_sample_labeling, backend_label_propagation
 from components import render_sidebar, apply_base_styles, get_datasets_path, render_restart_expander, render_inline_restart_button, get_swipecard_colors
+from components.utils import mark_pipeline_dirty
 
 # Page setup
 st.set_page_config(page_title="Labeling", layout="wide")
@@ -78,6 +79,8 @@ if not st.session_state.run_quality_folding:
             )
             st.session_state.sampled_cells = sampled_cells
             time.sleep(2)
+        # Labeling run started; downstream results are now outdated
+        mark_pipeline_dirty()
         st.session_state.run_quality_folding = True
         st.rerun()
 else:
@@ -121,6 +124,8 @@ if st.session_state.run_quality_folding:
             if idx is not None and action in {"left", "right"} and idx < len(cards):
                 card_id = cards[idx]["id"]
                 st.session_state.labeling_results[str(card_id)] = action == "right"
+        # Any labeling activity makes previous results stale
+        mark_pipeline_dirty()
 
     st.markdown("---")
     nav_cols = st.columns([1, 1, 1], gap="small")
