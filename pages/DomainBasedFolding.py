@@ -211,7 +211,6 @@ if st.session_state.get("run_folding"):
                 st.session_state.selected_split_tables = {}
                 mark_pipeline_dirty()
                 st.rerun()
-            st.markdown("---")
 
     # Navigation row: Restart | Back | Next
     st.markdown("---")

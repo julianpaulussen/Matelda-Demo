@@ -384,7 +384,18 @@ header_cols[0].markdown("**Fold / Cell**")
 header_cols[1].markdown("**Select**")
 
 for dom, folds in st.session_state.cell_folds.items():
-    for fname, cell_list in folds.items():
+    # Limit initially visible folds per domain to 1, with a 'show more' button
+    fold_names = list(folds.keys())
+    total_folds_in_domain = len(fold_names)
+    visible_folds_key = f"visible_folds_{dom}"
+    if visible_folds_key not in st.session_state:
+        st.session_state[visible_folds_key] = 1
+    # Clamp
+    st.session_state[visible_folds_key] = max(1, min(st.session_state[visible_folds_key], total_folds_in_domain))
+    show_fold_names = fold_names[: st.session_state[visible_folds_key]]
+
+    for fname in show_fold_names:
+        cell_list = folds[fname]
         fold_label = None
         if "pipeline_path" in st.session_state:
             cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
@@ -483,10 +494,19 @@ for dom, folds in st.session_state.cell_folds.items():
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
+    # Domain-level 'show more cell folds' button if more folds are available
+    if st.session_state[visible_folds_key] < total_folds_in_domain:
+        domain_btn_row = st.columns([4, action_col_width])
+        with domain_btn_row[0]:
+            st.markdown('<div class="small-show-more">', unsafe_allow_html=True)
+            if st.button("+ show more cell folds", key=f"show_more_folds_{dom}", use_container_width=False):
+                st.session_state[visible_folds_key] = min(total_folds_in_domain, st.session_state[visible_folds_key] + 3)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
 if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge) > 1:
-    st.markdown("---")
     merge_confirm_cols = st.columns([4, 1])
     if merge_confirm_cols[1].button("Confirm Merge", key="confirm_merge", use_container_width=True):
         target_fold = st.session_state.selected_folds_for_merge[0]
