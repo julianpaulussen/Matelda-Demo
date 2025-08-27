@@ -5,8 +5,9 @@ import os
 from typing import Dict, Any, List
 
 from streamlit_swipecards import streamlit_swipecards
-from backend import backend_sample_labeling, backend_label_propagation
+from backend import backend_sample_labeling
 from components import render_sidebar, apply_base_styles, get_datasets_path, render_restart_expander, render_inline_restart_button, get_swipecard_colors
+from components.utils import mark_pipeline_dirty
 
 # Page setup
 st.set_page_config(page_title="Labeling", layout="wide")
@@ -31,7 +32,7 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
 
 # If dataset remains undefined, warn user and provide a navigation button
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Dataset not configured.")
+    st.warning("⚠️ Pipeline not configured.")
     if st.button("Go back to Configurations"):
         st.switch_page("pages/Configurations.py")
     st.stop()
@@ -114,13 +115,22 @@ if st.session_state.run_quality_folding:
     if "labeling_results" not in st.session_state:
         st.session_state.labeling_results = {}
 
-    if results and results.get("swipedCards"):
-        for swipe in results.get("swipedCards", []):
+    if results and isinstance(results.get("swipedCards", None), list):
+        swipes = results.get("swipedCards", [])
+        made_changes = False
+        for swipe in swipes:
             idx = swipe.get("index")
             action = swipe.get("action")
             if idx is not None and action in {"left", "right"} and idx < len(cards):
                 card_id = cards[idx]["id"]
-                st.session_state.labeling_results[str(card_id)] = action == "right"
+                key = str(card_id)
+                new_val = action == "right"
+                if st.session_state.labeling_results.get(key) is None:
+                    st.session_state.labeling_results[key] = new_val
+                    made_changes = True
+        if made_changes:
+            # Only mark dirty if we actually recorded new swipes in this render
+            mark_pipeline_dirty()
 
     st.markdown("---")
     nav_cols = st.columns([1, 1, 1], gap="small")
@@ -133,23 +143,6 @@ if st.session_state.run_quality_folding:
     if nav_cols[1].button("Back", key="labeling_back", use_container_width=True):
         st.switch_page("pages/QualityBasedFolding.py")
 
-    # Next: run propagation and continue
+    # Next: go to Propagated Errors (propagation triggered there)
     if nav_cols[2].button("Next", key="labeling_next", use_container_width=True):
-        labeled_cells = []
-        for cell in cards:
-            is_error = not st.session_state.labeling_results.get(str(cell["id"]), False)
-            cell_info = {
-                "table": cell.get("table"),
-                "is_error": is_error,
-                "row": cell.get("row", 0),
-                "col": cell.get("col", ""),
-                "val": cell.get("val", ""),
-                "domain_fold": cell.get("domain_fold", ""),
-                "cell_fold": cell.get("cell_fold", ""),
-            }
-            labeled_cells.append(cell_info)
-
-        propagation_results = backend_label_propagation(dataset, labeled_cells)
-        st.session_state.propagation_results = propagation_results
-        st.session_state.propagation_saved = False
         st.switch_page("pages/PropagatedErrors.py")

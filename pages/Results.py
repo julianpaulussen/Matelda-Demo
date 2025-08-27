@@ -6,6 +6,7 @@ import datetime
 import pandas as pd
 import urllib.parse
 from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button, get_current_theme
+from components.utils import is_pipeline_dirty
 from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles
@@ -16,7 +17,6 @@ apply_base_styles()
 render_sidebar()
 
 st.title("Results")
-st.write("### Model Performance Metrics")
 
 def load_config(path):
     if os.path.exists(path):
@@ -47,9 +47,12 @@ if "pipeline_path" in st.session_state:
         precision_score = 0
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 else:
-    st.error("No pipeline selected!")
+    st.warning("⚠️ Pipeline not configured.")
+    if st.button("Go back to Configurations"):
+        st.switch_page("pages/Configurations.py")
     st.stop()
 
+st.write("### Model Performance Metrics")
 col1, col2, col3, col4 = st.columns(4)
 
 # -----------------------------------------------------------------------------
@@ -64,6 +67,10 @@ if not current_dataset and "pipeline_path" in st.session_state:
 
 dataset_configured = current_dataset is not None
 
+dirty = is_pipeline_dirty()
+# if dirty:
+    # st.info("Pipeline changed earlier in this session. Showing last saved results; rerun steps to refresh metrics.")
+
 if dataset_configured:
     with col1:
         st.metric(label="Recall", value=f"{recall_score:.2f}")
@@ -75,7 +82,7 @@ if dataset_configured:
         st.metric(label="Labeling Budget", value=str(current_labeling_budget))
 else:
     with col1:
-        st.warning("⚠️ Dataset not configured.")
+        st.warning("⚠️ Pipeline not configured.")
         if st.button("Go back to Configurations"):
             st.switch_page("pages/Configurations.py")
     col2.empty()
@@ -120,7 +127,8 @@ if dataset_configured:
         row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time
         for row in same_dataset_rows
     )
-    if not found_current:
+    # Only synthesize a current row when we have no match AND pipeline isn't marked dirty
+    if not found_current and results and not dirty:
         current_cfg = load_config(os.path.join(current_pipeline_path, "configurations.json"))
         current_labeling_budget = current_cfg.get("labeling_budget", "")
         current_row = {
@@ -181,7 +189,8 @@ found_current_all = any(
     row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time
     for row in all_rows
 )
-if not found_current_all:
+# Only synthesize a current row across all datasets when there is no match AND pipeline isn't marked dirty
+if not found_current_all and results and not dirty:
     current_cfg_all = load_config(os.path.join(current_pipeline_path, "configurations.json"))
     current_labeling_budget_all = current_cfg_all.get("labeling_budget", "")
     current_row_all = {

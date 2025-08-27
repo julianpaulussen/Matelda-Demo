@@ -15,6 +15,7 @@ from components import (
     render_inline_restart_button,
     get_current_theme,
 )
+from components.utils import mark_pipeline_dirty
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
@@ -113,7 +114,7 @@ if "selected_strategies" not in st.session_state and "pipeline_path" in st.sessi
 
 # If dataset is still not configured, inform the user and provide navigation
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Dataset not configured.")
+    st.warning("⚠️ Pipeline not configured.")
     if st.button("Go back to Configurations"):
         st.switch_page("pages/Configurations.py")
     st.stop()
@@ -149,6 +150,20 @@ if "domain_folds" not in st.session_state:
     else:
         st.warning("⚠️ No pipeline selected.")
         st.stop()
+
+# If saved cell folds exist in the pipeline config, preload them and mark as already run
+if "pipeline_path" in st.session_state and "cell_folds" not in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            saved_cell_folds = cfg.get("cell_folds")
+            if saved_cell_folds:
+                st.session_state.cell_folds = saved_cell_folds
+                st.session_state.run_quality_folding = True
+        except Exception:
+            pass
 
 # Initialize controls
 defaults = {
@@ -202,6 +217,8 @@ if st.button("▶️ Run Quality Based Folding"):
             json.dump(cfg, f, indent=2, default=_json_default)
             
         time.sleep(2)  # Keep a small delay for UX
+    # Cell folds changed, downstream results are outdated
+    mark_pipeline_dirty()
     st.session_state.run_quality_folding = True
     st.rerun()
 
@@ -267,7 +284,8 @@ def show_cell_dialog(cell, fold_name):
                 cfg["cell_folds"] = st.session_state.cell_folds
                 with open(cfg_path, "w") as f:
                     json.dump(cfg, f, indent=2, default=_json_default)
-
+            # Moving a cell changes folds
+            mark_pipeline_dirty()
             st.rerun()
         if st.button("Close", key=f"close_{fold_name}_{tbl}_{r}_{c}_{id(cell)}"):
             st.rerun()
@@ -351,6 +369,7 @@ for dom, folds in st.session_state.cell_folds.items():
                         cfg["cell_fold_labels"][fname] = "correct"
                         with open(cfg_path, "w") as f:
                             json.dump(cfg, f, indent=2, default=_json_default)
+                        mark_pipeline_dirty()
                         st.rerun()
             if button_cols[1].button("✗", key=f"false_{fname}", use_container_width=True):
                 if "pipeline_path" in st.session_state:
@@ -363,6 +382,7 @@ for dom, folds in st.session_state.cell_folds.items():
                         cfg["cell_fold_labels"][fname] = "false"
                         with open(cfg_path, "w") as f:
                             json.dump(cfg, f, indent=2, default=_json_default)
+                        mark_pipeline_dirty()
                         st.rerun()
         else:
             fold_cols[1].empty()
@@ -466,6 +486,7 @@ if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge
         
         st.session_state.selected_folds_for_merge = []
         st.session_state.merge_mode = False
+        mark_pipeline_dirty()
         st.rerun()
 
 # Global Confirm Split: if split mode is active and at least one cell is selected
@@ -501,6 +522,7 @@ if st.session_state.split_mode:
             
             st.session_state.split_mode = False
             st.session_state.selected_cells_for_split = {}
+            mark_pipeline_dirty()
             st.rerun()
 
 # Navigation row: Restart | Back | Next
