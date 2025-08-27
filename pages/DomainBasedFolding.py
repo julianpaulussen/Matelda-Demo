@@ -4,7 +4,14 @@ import os
 import time
 import json
 from backend import backend_dbf
-from components import render_sidebar, apply_base_styles, apply_folding_styles, render_restart_expander, render_inline_restart_button
+from components import (
+    render_sidebar,
+    apply_base_styles,
+    apply_folding_styles,
+    render_restart_expander,
+    render_inline_restart_button,
+    update_domain_folds_in_config,
+)
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
@@ -38,7 +45,7 @@ selected_dataset = st.session_state.dataset_select
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
 
-# Load saved domain folds only if a pipeline is selected and table_locations is not already set.
+# Load saved domain folds only if a pipeline is selected. If found, also mark run_folding True
 if "pipeline_path" in st.session_state and "table_locations" not in st.session_state:
     pipeline_config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     if os.path.exists(pipeline_config_path):
@@ -50,6 +57,7 @@ if "pipeline_path" in st.session_state and "table_locations" not in st.session_s
             st.session_state.table_locations = {
                 table: fold for fold, tables in saved_folds.items() for table in tables
             }
+            st.session_state.run_folding = True
 
 # Initialize session state variables
 if "merge_mode" not in st.session_state:
@@ -82,6 +90,12 @@ if st.button("▶️ Run Domain Based Folding"):
         st.session_state.table_locations = {
             table: fold for fold, tables in domain_folds.items() for table in tables
         }
+        # Persist domain folds into the pipeline configuration for reloading later
+        if "pipeline_path" in st.session_state:
+            try:
+                update_domain_folds_in_config(st.session_state.pipeline_path, st.session_state.table_locations)
+            except Exception:
+                pass
         time.sleep(2)  # Keep a small delay for UX
     st.session_state.run_folding = True
 

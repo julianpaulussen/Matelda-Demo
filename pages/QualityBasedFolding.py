@@ -150,6 +150,20 @@ if "domain_folds" not in st.session_state:
         st.warning("⚠️ No pipeline selected.")
         st.stop()
 
+# If saved cell folds exist in the pipeline config, preload them and mark as already run
+if "pipeline_path" in st.session_state and "cell_folds" not in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            saved_cell_folds = cfg.get("cell_folds")
+            if saved_cell_folds:
+                st.session_state.cell_folds = saved_cell_folds
+                st.session_state.run_quality_folding = True
+        except Exception:
+            pass
+
 # Initialize controls
 defaults = {
     "run_quality_folding": False,

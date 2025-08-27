@@ -56,11 +56,9 @@ def load_pipeline_config_ui():
     pipeline_config = load_pipeline_config(pipeline_path)
     
     pipeline_dataset = pipeline_config.get("selected_dataset", None)
-    # Get the dataset currently selected in the UI (from the selectbox, which writes to st.session_state.dataset_select)
-    current_dataset = st.session_state.get("dataset_select")
-    if current_dataset is None and pipeline_dataset:
+    # Always sync dataset to the pipeline's configured dataset to avoid corruption on revisits
+    if pipeline_dataset:
         st.session_state["dataset_select"] = pipeline_dataset
-        current_dataset = pipeline_dataset
     # Update the budget from config. Clamp slider to 100 but keep input full value.
     _cfg_budget = pipeline_config.get("labeling_budget", 10)
     st.session_state.budget_slider = min(int(_cfg_budget), 100)
@@ -101,10 +99,8 @@ if pipeline_choice == "Use Existing Pipeline":
         key="selected_pipeline",
         on_change=load_pipeline_config_ui
     )
-    
-    # On first load, load configuration if not already set.
-    if "budget_slider" not in st.session_state:
-        load_pipeline_config_ui()
+    # Always sync the selected pipeline's configuration (dataset, budget, strategies)
+    load_pipeline_config_ui()
     
     st.markdown("---")
     st.subheader("Labeling Budget")
