@@ -226,16 +226,78 @@ st.markdown("#### Result Comparison (All Pipelines/Datasets)")
 st.write("_(Click on column headers to sort the table.)_")
 st.dataframe(styled_all_df)
 
-# Interactive graphs for all datasets/pipelines comparison
-if not all_df.empty and len(all_df) > 1:
+###############################
+# Charts from CSV-only sources #
+###############################
+
+def _load_chart_data_from_csv() -> pd.DataFrame:
+    """Load chart data exclusively from sample CSVs.
+
+    Returns a long-form DataFrame with columns:
+    - 'Labeling Budget', 'Pipeline Name', 'F1', 'Precision', 'Recall'
+    """
+    base_dir = os.path.dirname(__file__)
+    matelda_path = os.path.join(base_dir, "../sample-diagram-data/matelda_results_quintet.csv")
+    raha_path = os.path.join(base_dir, "../sample-diagram-data/raha_standard_all_features.csv")
+
+    frames = []
+
+    # Matelda
+    if os.path.exists(matelda_path):
+        try:
+            mdf = pd.read_csv(matelda_path)
+            mdf = mdf.rename(
+                columns={
+                    "labeling_budget": "Labeling Budget",
+                    "fscore": "F1",
+                    "precision": "Precision",
+                    "recall": "Recall",
+                }
+            )
+            mdf["Pipeline Name"] = "Matelda"
+            frames.append(mdf[["Labeling Budget", "Pipeline Name", "F1", "Precision", "Recall"]])
+        except Exception as e:
+            st.warning(f"Failed to load Matelda CSV: {e}")
+    else:
+        st.info("Matelda CSV not found in sample-diagram-data.")
+
+    # RAHA
+    if os.path.exists(raha_path):
+        try:
+            rdf = pd.read_csv(raha_path)
+            rdf = rdf.rename(
+                columns={
+                    "labeling_budget": "Labeling Budget",
+                    "fscore": "F1",
+                    "precision": "Precision",
+                    "recall": "Recall",
+                }
+            )
+            rdf["Pipeline Name"] = "RAHA"
+            frames.append(rdf[["Labeling Budget", "Pipeline Name", "F1", "Precision", "Recall"]])
+        except Exception as e:
+            st.warning(f"Failed to load RAHA CSV: {e}")
+    else:
+        st.info("RAHA CSV not found in sample-diagram-data.")
+
+    if frames:
+        df = pd.concat(frames, ignore_index=True)
+        # Ensure numeric
+        df["Labeling Budget"] = pd.to_numeric(df["Labeling Budget"], errors="coerce")
+        for c in ["F1", "Precision", "Recall"]:
+            if c in df.columns:
+                df[c] = pd.to_numeric(df[c], errors="coerce")
+        # Drop rows missing essential values
+        df = df.dropna(subset=["Labeling Budget"]).sort_values("Labeling Budget")
+        return df
+    return pd.DataFrame(columns=["Labeling Budget", "Pipeline Name", "F1", "Precision", "Recall"])
+
+
+charts_df = _load_chart_data_from_csv()
+if not charts_df.empty:
     st.markdown("---")
     st.markdown("#### Performance vs Labeling Budget")
 
-    # Ensure numeric and sorted budgets for clean X-axis
-    if 'Labeling Budget' in all_df.columns:
-        all_df['Labeling Budget'] = pd.to_numeric(all_df['Labeling Budget'], errors='coerce')
-
-    # Build three separate line charts with legends per pipeline
     metrics_to_plot = [
         ("F1", "F1 Score"),
         ("Precision", "Precision"),
@@ -243,15 +305,14 @@ if not all_df.empty and len(all_df) > 1:
     ]
 
     for metric_key, metric_label in metrics_to_plot:
-        # Pivot so each pipeline is a separate series (legend), X = Labeling Budget
-        if metric_key in all_df.columns and 'Pipeline Name' in all_df.columns and 'Labeling Budget' in all_df.columns:
+        if metric_key in charts_df.columns:
             pivot_df = (
-                all_df
+                charts_df
                 .pivot_table(
-                    index='Labeling Budget',
-                    columns='Pipeline Name',
+                    index="Labeling Budget",
+                    columns="Pipeline Name",
                     values=metric_key,
-                    aggfunc='mean'
+                    aggfunc="mean",
                 )
                 .sort_index()
             )
@@ -259,7 +320,6 @@ if not all_df.empty and len(all_df) > 1:
             if not pivot_df.empty:
                 st.markdown(f"##### {metric_label} vs Labeling Budget")
                 st.caption(f"X-axis: Labeling Budget | Y-axis: {metric_label}")
-                # Streamlit will render a legend using the column names (pipeline names)
                 st.line_chart(pivot_df, use_container_width=True)
 
 
