@@ -40,10 +40,31 @@ if "dataset_select" not in st.session_state:
 # labeling instead of showing an error
 # ---------------------------------------------------------------------------
 if "propagation_results" not in st.session_state:
-    st.warning("No propagation results available. Please label the provided cells")
-    if st.button("Go back to Labeling"):
-        st.switch_page("pages/Labeling.py")
-    st.stop()
+    # Try to load previously saved full propagation_results from the pipeline config
+    loaded_from_config = False
+    if "pipeline_path" in st.session_state:
+        cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path) as f:
+                    cfg = json.load(f)
+                # Highest priority: top-level saved propagation_results
+                if cfg.get("propagation_results"):
+                    st.session_state.propagation_results = cfg["propagation_results"]
+                    loaded_from_config = True
+                else:
+                    # Fallback to latest results entry if it contains full propagation_results
+                    results = cfg.get("results", [])
+                    if results and isinstance(results[-1], dict) and results[-1].get("propagation_results"):
+                        st.session_state.propagation_results = results[-1]["propagation_results"]
+                        loaded_from_config = True
+            except Exception:
+                pass
+    if not loaded_from_config:
+        st.warning("No propagation results available. Please label the provided cells")
+        if st.button("Go back to Labeling"):
+            st.switch_page("pages/Labeling.py")
+        st.stop()
 
 propagation_results = st.session_state.propagation_results
 
@@ -89,7 +110,7 @@ for labeled_cell in propagation_results["labeled_cells"]:
         else:
             st.info("No cells were propagated from this label")
 
-# Save propagated errors to pipeline configuration only once
+# Save propagated errors to pipeline configuration only once (including full propagation_results)
 if "pipeline_path" in st.session_state and not st.session_state.get("propagation_saved"):
     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     if os.path.exists(cfg_path):
@@ -128,7 +149,9 @@ if "pipeline_path" in st.session_state and not st.session_state.get("propagation
                     error_info["val"] = prop["val"]
                 propagated_errors[table].append(error_info)
 
+        # Save both simplified aggregated errors and the full propagation results structure
         cfg["propagated_errors"] = propagated_errors
+        cfg["propagation_results"] = propagation_results
         metrics = {
             "Precision": round(random.uniform(0.7, 0.9), 2),
             "Recall": round(random.uniform(0.7, 0.9), 2),
@@ -138,6 +161,7 @@ if "pipeline_path" in st.session_state and not st.session_state.get("propagation
         results_entry = {
             "Time": current_time,
             "propagated_errors": propagated_errors,
+            "propagation_results": propagation_results,
             "metrics": metrics
         }
 
