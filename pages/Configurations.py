@@ -561,6 +561,14 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
             }
             save_config_to_json(config_to_save, pipeline_folder)
             st.success(f"New pipeline created and configurations saved in {pipeline_folder}!")
-            # New pipeline starts in a clean state
+            # Reset session to ensure a fresh start when creating a brand-new pipeline
+            # Preserve only the newly created pipeline path so downstream pages can load config
+            _new_pipeline_path = pipeline_folder
+            for key in list(st.session_state.keys()):
+                try:
+                    del st.session_state[key]
+                except Exception:
+                    pass
+            st.session_state["pipeline_path"] = _new_pipeline_path
             mark_pipeline_clean()
             st.switch_page("pages/DomainBasedFolding.py")
