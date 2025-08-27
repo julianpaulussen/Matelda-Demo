@@ -307,10 +307,21 @@ def backend_sample_labeling(
 
     # If we don't have enough cells in cell_folds, generate additional random cells
     if len(all_cells) < labeling_budget:
-        # Get all tables from domain folds
-        all_tables = []
+        # Get all tables from domain folds; if not available, list dataset tables as fallback
+        all_tables: List[str] = []
         for tables in domain_folds.values():
             all_tables.extend(tables)
+        if not all_tables:
+            try:
+                all_tables = [
+                    d for d in os.listdir(datasets_path) if os.path.isdir(os.path.join(datasets_path, d))
+                ]
+            except Exception:
+                all_tables = []
+
+        # If still no tables, return whatever we have (avoid crashing)
+        if not all_tables:
+            return []
 
         # Generate additional random cells
         while len(all_cells) < labeling_budget:
@@ -328,14 +339,10 @@ def backend_sample_labeling(
                         col_idx = header.index(col)
                         if col_idx < len(values):
                             val = values[col_idx]
-                            # Find the domain fold for this table
+                            # Find the domain fold for this table; if unknown, assign default
                             domain_fold = next(
-                                (
-                                    fold
-                                    for fold, tables in domain_folds.items()
-                                    if table in tables
-                                ),
-                                "Unknown Domain",
+                                (fold for fold, tables in domain_folds.items() if table in tables),
+                                "Domain Fold 1",
                             )
                             cell_fold_name = f"{domain_fold} / Random Sample"
                             cell_info = {

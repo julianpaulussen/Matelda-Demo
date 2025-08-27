@@ -1,5 +1,6 @@
 import streamlit as st
 from components import render_sidebar, apply_base_styles, get_current_theme
+from components.session_persistence import clear_persisted_session
 
 st.set_page_config(
     page_title="Matelda", 
@@ -48,6 +49,7 @@ if st.button("Start"):
             with col_b:
                 if st.button("🆕 Start Fresh Pipeline", key="start_fresh", use_container_width=True):
                     # Clear all session state to start from scratch (similar to restart functionality)
+                    clear_persisted_session()
                     for key in list(st.session_state.keys()):
                         del st.session_state[key]
                     st.switch_page("pages/Configurations.py")

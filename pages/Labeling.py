@@ -39,6 +39,28 @@ if "dataset_select" not in st.session_state:
 
 dataset = st.session_state.dataset_select
 
+# Hydrate domain_folds and cell_folds from pipeline config on reload
+if ("domain_folds" not in st.session_state or not st.session_state.get("domain_folds")) and "pipeline_path" in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            st.session_state.domain_folds = cfg.get("domain_folds", {})
+        except Exception:
+            pass
+
+if ("cell_folds" not in st.session_state or not st.session_state.get("cell_folds")) and "pipeline_path" in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            if cfg.get("cell_folds"):
+                st.session_state.cell_folds = cfg.get("cell_folds")
+        except Exception:
+            pass
+
 
 def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
     """Return a table-mode card configuration for streamlit-swipecards."""

@@ -563,7 +563,13 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
             st.success(f"New pipeline created and configurations saved in {pipeline_folder}!")
             # Reset session to ensure a fresh start when creating a brand-new pipeline
             # Preserve only the newly created pipeline path so downstream pages can load config
+            from components.session_persistence import clear_persisted_session
             _new_pipeline_path = pipeline_folder
+            # Clear persisted snapshot so fresh pipeline starts clean
+            try:
+                clear_persisted_session()
+            except Exception:
+                pass
             for key in list(st.session_state.keys()):
                 try:
                     del st.session_state[key]
