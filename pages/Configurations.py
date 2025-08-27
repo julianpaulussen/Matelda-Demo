@@ -85,10 +85,26 @@ def sync_input_to_slider():
     except Exception:
         st.session_state.budget_slider = 100
 
+# Determine default choice based on session state (prefer existing pipeline if in use)
+default_choice_index = 0  # 0 = Create New Pipeline, 1 = Use Existing Pipeline
+try:
+    # If a pipeline_path is set and points under the pipelines folder, preselect existing
+    current_pipeline_path = st.session_state.get("pipeline_path")
+    if current_pipeline_path:
+        current_dir_name = os.path.basename(os.path.normpath(current_pipeline_path))
+        if os.path.exists(os.path.join(pipelines_folder, current_dir_name)):
+            default_choice_index = 1
+            # Ensure the selectbox defaults to the current pipeline name
+            st.session_state["selected_pipeline"] = current_dir_name
+    elif st.session_state.get("selected_pipeline") in existing_pipelines:
+        default_choice_index = 1
+except Exception:
+    pass
+
 pipeline_choice = st.radio(
     "Do you want to use an existing pipeline or create a new one?",
     options=["Create New Pipeline", "Use Existing Pipeline"],
-    index=0,
+    index=default_choice_index,
 )
 
 if pipeline_choice == "Use Existing Pipeline":
