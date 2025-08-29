@@ -1,5 +1,6 @@
 import streamlit as st
 from components import render_sidebar, apply_base_styles, get_current_theme
+from backend.api import ensure_api_started
 from components.session_persistence import clear_persisted_session
 
 st.set_page_config(
@@ -12,6 +13,21 @@ st.set_page_config(
 # Apply base styles with current theme
 current_theme = get_current_theme()
 apply_base_styles(current_theme)
+
+# Ensure multiplayer backend is running whenever the app starts
+try:
+    _ = ensure_api_started()
+except Exception:
+    # Non-fatal if backend can't start; pages that need it will show errors
+    pass
+
+# If a join URL (?session_id=...) hits the root app, redirect to Join page
+try:
+    qp = st.query_params
+    if qp and "session_id" in qp and qp.get("session_id"):
+        st.switch_page("pages/03_Multi_Join.py")
+except Exception:
+    pass
 
 st.title("Matelda")
 st.write("Welcome to Matelda!")

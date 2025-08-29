@@ -8,7 +8,8 @@ from .utils import (
     load_clean_table,
     load_pipeline_config,
     save_pipeline_config,
-    update_domain_folds_in_config
+    update_domain_folds_in_config,
+    get_base_url,
 )
 from .session_persistence import get_session_hash
 
@@ -24,5 +25,6 @@ __all__ = [
     'load_clean_table',
     'load_pipeline_config',
     'save_pipeline_config',
-    'update_domain_folds_in_config'
+    'update_domain_folds_in_config',
+    'get_base_url',
 ]

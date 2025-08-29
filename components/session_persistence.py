@@ -90,6 +90,9 @@ DEFAULT_INCLUDE_PREFIXES: tuple[str, ...] = (
     "budget_",
     "labeling_budget",
     "selected_strategies",
+    # Labeling state (persist across reloads)
+    "labeling_",
+    "sampled_",
     # Domain/quality folding derived state
     "table_locations",
     "domain_folds",
@@ -99,6 +102,8 @@ DEFAULT_INCLUDE_PREFIXES: tuple[str, ...] = (
     "global_split_mode",
     "selected_split_tables",
     "run_folding",
+    # Multiplayer session keys
+    "mp.",
 )
 
 

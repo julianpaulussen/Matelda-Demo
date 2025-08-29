@@ -4,6 +4,7 @@ import json
 import time
 import random
 from backend import backend_label_propagation
+from backend import sessions as mp_sessions  # multiplayer labels source
 from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
 # Removed: do not flip pipeline clean state from this page
 
@@ -42,21 +43,56 @@ if "dataset_select" not in st.session_state:
 # ---------------------------------------------------------------------------
 selected_dataset = st.session_state.dataset_select
 if st.button("🔁 Propagate Errors", key="propagate_errors", use_container_width=False):
-    # Prefer namespaced key from Labeling; fallback to legacy key
-    cards = st.session_state.get("labeling.sampled_cells") or st.session_state.get("sampled_cells", [])
-    labeling_results = st.session_state.get("labeling_results", {})
     labeled_cells = []
-    for cell in cards:
-        is_error = not labeling_results.get(str(cell.get("id")), False)
-        labeled_cells.append({
-            "table": cell.get("table"),
-            "is_error": is_error,
-            "row": cell.get("row", 0),
-            "col": cell.get("col", ""),
-            "val": cell.get("val", ""),
-            "domain_fold": cell.get("domain_fold", ""),
-            "cell_fold": cell.get("cell_fold", ""),
-        })
+    # Multiplayer host path: aggregate labels from all players via sessions DB
+    sid = st.session_state.get("mp.session_id")
+    role = st.session_state.get("mp.role")
+    used_multiplayer = False
+    if sid and role == "host":
+        try:
+            merged = mp_sessions.merged_labels(sid)
+            # If dataset not set, derive from merged labels
+            if merged and not selected_dataset:
+                selected_dataset = merged[0].get("dataset")
+                if selected_dataset:
+                    st.session_state.dataset_select = selected_dataset
+            for m in merged:
+                # Only include items that have been labeled
+                if not m.get("label_value"):
+                    continue
+                labeled_cells.append({
+                    "table": m.get("table"),
+                    "is_error": str(m.get("label_value")).lower() != "correct",
+                    "row": m.get("row", 0),
+                    "col": m.get("col", ""),
+                    "val": m.get("val", ""),
+                    "domain_fold": "",
+                    "cell_fold": "",
+                })
+            used_multiplayer = True
+        except Exception as e:
+            st.error(f"Failed to load multiplayer labels: {e}")
+
+    if not used_multiplayer:
+        # Single-player (or fallback) path: use only cells that were actually labeled
+        cards = st.session_state.get("labeling.sampled_cells") or st.session_state.get("sampled_cells", [])
+        labeling_results = st.session_state.get("labeling_results", {})
+        for cell in cards:
+            cid = cell.get("id") or cell.get("sample_id") or f"{cell.get('table')}|{cell.get('row')}|{cell.get('col')}|{cell.get('val')}"
+            key = str(cid)
+            if key not in labeling_results:
+                continue  # skip unlabeled cells
+            is_error = not bool(labeling_results.get(key))
+            labeled_cells.append({
+                "table": cell.get("table"),
+                "is_error": is_error,
+                "row": cell.get("row", 0),
+                "col": cell.get("col", ""),
+                "val": cell.get("val", ""),
+                "domain_fold": cell.get("domain_fold", ""),
+                "cell_fold": cell.get("cell_fold", ""),
+            })
+
     propagation_results = backend_label_propagation(selected_dataset, labeled_cells)
     st.session_state.propagation_results = propagation_results
     # Mark that propagation was executed in this session and needs saving

@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import json
 from typing import Dict, Any, Optional
+from urllib.parse import urlparse
 import streamlit as st
 
 
@@ -74,3 +75,81 @@ def mark_pipeline_clean() -> None:
 def is_pipeline_dirty() -> bool:
     """Check if current session's pipeline state is dirty."""
     return bool(st.session_state.get("pipeline_dirty", False))
+
+
+# ----------------------------
+# URL utilities
+# ----------------------------
+def _normalize_url(value: str) -> Optional[str]:
+    """Normalize a potentially partial URL string into a full origin.
+
+    - Adds scheme if missing (defaults to https).
+    - Returns only the origin (scheme://host[:port]).
+    """
+    if not value:
+        return None
+    v = value.strip().strip('/')
+    if not v:
+        return None
+    # Prepend scheme if missing
+    if not v.startswith("http://") and not v.startswith("https://"):
+        v = "https://" + v
+    try:
+        parsed = urlparse(v)
+        if not parsed.scheme or not parsed.netloc:
+            return None
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        return origin
+    except Exception:
+        return None
+
+
+def get_base_url() -> str:
+    """Best-effort detection of the app's base URL (origin).
+
+    Priority:
+    1) Use JavaScript `window.location.origin` if available (via streamlit_javascript).
+    2) Respect explicit configuration: `st.secrets['base_url']` or common env vars.
+    3) Fallback to localhost with the configured Streamlit server port.
+    """
+    # 1) Attempt to read from browser via JS
+    try:
+        from streamlit_javascript import st_javascript  # type: ignore
+        origin = st_javascript("window.location.origin")
+        if isinstance(origin, str) and origin:
+            norm = _normalize_url(origin)
+            if norm:
+                return norm
+    except Exception:
+        pass
+
+    # 2) Explicit config via secrets or environment
+    try:
+        base_from_secret = st.secrets.get("base_url")  # type: ignore[attr-defined]
+        norm = _normalize_url(str(base_from_secret)) if base_from_secret else None
+        if norm:
+            return norm
+    except Exception:
+        pass
+
+    for key in (
+        "STREAMLIT_BASE_URL",
+        "BASE_URL",
+        "PUBLIC_BASE_URL",
+        "PUBLIC_URL",
+        "EXTERNAL_URL",
+        "RENDER_EXTERNAL_URL",
+        "VERCEL_URL",
+        "FLY_APP_URL",
+    ):
+        v = os.environ.get(key)
+        norm = _normalize_url(v) if v else None
+        if norm:
+            return norm
+
+    # 3) Fallback to localhost with configured port
+    try:
+        port = st.get_option("server.port") or 8501
+    except Exception:
+        port = 8501
+    return f"http://localhost:{port}"
