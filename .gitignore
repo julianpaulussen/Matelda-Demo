@@ -75,3 +75,10 @@ pipelines/*
 # Ignore dataset directories with numbered suffixes
 datasets/Demo*/
 datasets/Quintet*/
+
+# Cache files
+datasets/*/cache/
+**/cache/domain_folds_cache.json
+
+# Streamlit session files
+.streamlit/sessions/
