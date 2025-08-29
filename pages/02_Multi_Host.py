@@ -62,34 +62,52 @@ with st.container(border=True):
     st.subheader("Invite Players")
     origin = get_base_url()
     join_url = f"{origin}/?session_id={sid}"
-    st.text_input("Join URL", value=join_url, key="mp.join_url_display", disabled=True, label_visibility="collapsed")
-    if st.button("Copy link", use_container_width=True):
-        try:
-            from streamlit_javascript import st_javascript  # type: ignore
-            st_javascript(f'navigator.clipboard.writeText("{join_url}")')
-            st.success("Copied to clipboard")
-        except Exception:
-            st.info("Copy not available; select and copy the field above.")
-    # QR
+    # Join URL with inline copy button
+    url_col, copy_col = st.columns([6, 1], gap="small")
+    with url_col:
+        st.text_input("Join URL", value=join_url, key="mp.join_url_display", help="Share this link with players.")
+    with copy_col:
+        if st.button("📋", key="copy_join_url", help="Copy link", use_container_width=True):
+            try:
+                from streamlit_javascript import st_javascript  # type: ignore
+                st_javascript(f'navigator.clipboard.writeText("{join_url}")')
+                st.success("Join URL copied")
+            except Exception:
+                st.info("Copy not available; select the field and copy.")
+
+    # Session code with inline copy button
+    code_col, code_copy_col = st.columns([6, 1], gap="small")
+    with code_col:
+        st.text_input("Session Code", value=sid, key="mp.session_code_display", help="Share this code for joining.")
+    with code_copy_col:
+        if st.button("📋", key="copy_session_code", help="Copy code", use_container_width=True):
+            try:
+                from streamlit_javascript import st_javascript  # type: ignore
+                st_javascript(f'navigator.clipboard.writeText("{sid}")')
+                st.success("Session code copied")
+            except Exception:
+                st.info("Copy not available; select the field and copy.")
+    # QR (show precise error only if import fails)
     try:
-        import qrcode
+        import qrcode  # type: ignore
+        from io import BytesIO
         img = qrcode.make(join_url)
-        st.image(img, caption="Scan to join")
-    except Exception:
-        st.warning("Install QR support: pip install 'qrcode[pil]'")
+        # Convert to PNG bytes to avoid backend/image type mismatches
+        pil_img = img.get_image() if hasattr(img, "get_image") else img
+        buf = BytesIO()
+        pil_img.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="Scan to join")
+    except ImportError:
+        st.warning("QR support not available. Install with: pip install 'qrcode[pil]'")
+    except Exception as e:
+        st.error(f"Failed generating QR: {e}")
 
 # Players block
 with st.container(border=True):
     st.subheader("Players")
-    auto = st.checkbox("Live updates (auto-refresh)", value=False)
     if st.button("Refresh now"):
         st.rerun()
-    if auto:
-        try:
-            from streamlit_autorefresh import st_autorefresh
-            st_autorefresh(interval=3500, key="host_lobby_refresh")
-        except Exception:
-            pass
+    st.info("Once all players are in, click Refresh now to update their status before starting.")
     try:
         meta = requests.get(f"{API_BASE}/sessions/{sid}", timeout=10).json()
         for p in meta.get("players", []):
@@ -101,12 +119,21 @@ st.markdown("---")
 colA, colB = st.columns(2)
 with colA:
     if st.button("Start session", type="primary", use_container_width=True):
-        try:
-            # Trigger background preparation; then host proceeds to player labeling view
-            requests.post(f"{API_BASE}/sessions/{sid}/start", timeout=10)
-            st.switch_page("pages/05_Multi_PlayerLabel.py")
-        except Exception as e:
-            st.error(f"Failed to start: {e}")
+        @st.dialog("Start Session Now?", width="medium")
+        def _confirm_start_dialog():
+            st.write("Are you sure all players have joined? Starting will assign items to players.")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🆗 Yes, start", key="host_start_confirm", use_container_width=True):
+                    try:
+                        requests.post(f"{API_BASE}/sessions/{sid}/start", timeout=10)
+                        st.switch_page("pages/05_Multi_PlayerLabel.py")
+                    except Exception as e:
+                        st.error(f"Failed to start: {e}")
+            with col2:
+                if st.button("Cancel", key="host_start_cancel", use_container_width=True):
+                    st.rerun()
+        _confirm_start_dialog()
 with colB:
     if st.button("Back", use_container_width=True):
         st.switch_page("pages/01_Multi_Role.py")

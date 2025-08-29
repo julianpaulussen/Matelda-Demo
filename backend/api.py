@@ -16,8 +16,8 @@ import http.client
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from . import sessions as S
 from .sample_source import backend_sample_labeling
+from . import sessions as S
 
 
 def _api_host() -> str:
@@ -113,6 +113,16 @@ def api_create_player(session_id: str, body: CreatePlayerBody) -> Dict[str, Any]
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return player
+
+
+@app.post("/api/sessions/{session_id}/players/{player_id}/done")
+def api_mark_player_done(session_id: str, player_id: str) -> Dict[str, Any]:
+    """Mark a player as done even if they haven't labeled all assignments."""
+    try:
+        S.set_player_done(session_id, player_id)
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/sessions/{session_id}")

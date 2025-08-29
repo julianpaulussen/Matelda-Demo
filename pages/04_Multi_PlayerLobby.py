@@ -22,13 +22,9 @@ if not (sid and pid):
 
 st.info(f"You are: {name}")
 
-live = st.checkbox("Live updates (auto-refresh)", key="player_lobby_live", value=False)
 if st.button("Refresh now"):
     st.rerun()
-if live:
-    import time
-    time.sleep(3.5)
-    st.rerun()
+st.info("Waiting for host to start. Click Refresh to check the status.")
 
 try:
     meta = requests.get(f"{API_BASE}/sessions/{sid}", timeout=5).json()

@@ -333,6 +333,18 @@ def complete_session(session_id: str) -> None:
         conn.execute("UPDATE sessions SET status='completed' WHERE session_id=?", (session_id,))
         conn.commit()
 
+def set_player_done(session_id: str, player_id: str) -> None:
+    """Mark a player's status as 'done' regardless of how many items they labeled."""
+    with _connect() as conn:
+        # Ensure player belongs to session for safety
+        row = conn.execute(
+            "SELECT 1 FROM players WHERE player_id=? AND session_id=?",
+            (player_id, session_id),
+        ).fetchone()
+        if row:
+            conn.execute("UPDATE players SET status='done' WHERE player_id=?", (player_id,))
+            conn.commit()
+
 
 def save_session_pool(session_id: str, samples: List[Dict]) -> int:
     """Store ordered pool provided by host. Each item requires sample_id, dataset, table, row, col, val."""

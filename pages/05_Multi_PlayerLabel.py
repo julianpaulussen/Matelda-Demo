@@ -161,13 +161,16 @@ if nav_cols[1].button("Back", key="player_label_back", use_container_width=True)
         st.switch_page("pages/04_Multi_PlayerLobby.py")
 
 if nav_cols[2].button("Next", key="player_label_next", use_container_width=True):
-    # If all items labeled, host proceeds to Propagated Errors; players to Thanks
-    done = sum(1 for c in cards if str((c.get("id") or c.get("sample_id"))) in st.session_state.labeling_results)
-    if done >= len(cards):
-        if st.session_state.get("mp.role") == "host":
-            # After host finishes, go to host progress lobby
-            st.switch_page("pages/07_Multi_HostProgress.py")
-        else:
-            st.switch_page("pages/06_Multi_PlayerThanks.py")
+    # Allow proceeding even if not all items labeled. Mark the player as done.
+    try:
+        requests.post(
+            f"{API_BASE}/sessions/{sid}/players/{pid}/done",
+            timeout=API_TIMEOUT,
+        )
+    except Exception:
+        pass
+    # Navigate: host -> Host Progress; player -> Thanks
+    if st.session_state.get("mp.role") == "host":
+        st.switch_page("pages/07_Multi_HostProgress.py")
     else:
-        st.info("Please finish labeling all assigned items.")
+        st.switch_page("pages/06_Multi_PlayerThanks.py")

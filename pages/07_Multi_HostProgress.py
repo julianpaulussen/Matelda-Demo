@@ -18,13 +18,9 @@ if not sid:
     st.warning("No session active.")
     st.stop()
 
-live = st.checkbox("Live updates (auto-refresh)", key="host_progress_live", value=False)
 if st.button("Refresh now"):
     st.rerun()
-if live:
-    import time
-    time.sleep(3.5)
-    st.rerun()
+st.info("Click Refresh to update player statuses. You can continue once everyone is ready.")
 
 all_done = False
 try:
@@ -52,7 +48,7 @@ with nav_cols[0]:
     render_inline_restart_button(page_id="host_progress", use_container_width=True)
 
 with nav_cols[1]:
-    if st.button("Back to Labeling", use_container_width=True):
+    if st.button("Back", use_container_width=True):
         st.switch_page("pages/05_Multi_PlayerLabel.py")
 
 with nav_cols[2]:

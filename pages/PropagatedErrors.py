@@ -74,12 +74,15 @@ if st.button("🔁 Propagate Errors", key="propagate_errors", use_container_widt
             st.error(f"Failed to load multiplayer labels: {e}")
 
     if not used_multiplayer:
-        # Single-player (or fallback) path: use local session-state results
+        # Single-player (or fallback) path: use only cells that were actually labeled
         cards = st.session_state.get("labeling.sampled_cells") or st.session_state.get("sampled_cells", [])
         labeling_results = st.session_state.get("labeling_results", {})
         for cell in cards:
             cid = cell.get("id") or cell.get("sample_id") or f"{cell.get('table')}|{cell.get('row')}|{cell.get('col')}|{cell.get('val')}"
-            is_error = not labeling_results.get(str(cid), False)
+            key = str(cid)
+            if key not in labeling_results:
+                continue  # skip unlabeled cells
+            is_error = not bool(labeling_results.get(key))
             labeled_cells.append({
                 "table": cell.get("table"),
                 "is_error": is_error,
