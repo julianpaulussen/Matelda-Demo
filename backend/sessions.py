@@ -197,6 +197,7 @@ def start_session(session_id: str) -> Dict:
 
     min_budget = int(sess["min_budget"])
     players = list_players(session_id)
+    # Include host in assignments so host can label too
     if not players:
         raise ValueError("No players registered")
 
@@ -240,6 +241,12 @@ def start_session(session_id: str) -> Dict:
         conn.commit()
 
     return {"status": "active", "assigned": len(assignments)}
+
+
+def set_status(session_id: str, status: str) -> None:
+    with _connect() as conn:
+        conn.execute("UPDATE sessions SET status=? WHERE session_id=?", (status, session_id))
+        conn.commit()
 
 
 def get_player_batch(session_id: str, player_id: str) -> List[Dict]:
@@ -404,6 +411,15 @@ def merged_labels(session_id: str) -> List[Dict]:
             "label_value": r["label_value"],
         }
     return list(merged.values())
+
+
+def count_player_labels(session_id: str, player_id: str) -> int:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS c FROM labels WHERE session_id=? AND player_id=?",
+            (session_id, player_id),
+        ).fetchone()
+        return int(row[0] if row else 0)
 
 
 if __name__ == "__main__":

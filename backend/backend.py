@@ -2,9 +2,20 @@ import json
 import os
 import random
 from typing import Any, Dict, List
+from datetime import datetime
+import logging
 
 import streamlit as st
 from .domain_folding import load_from_cache, matelda_domain_folding, save_to_cache
+
+# Module logger for sampling/backend messages
+logger = logging.getLogger("sampling")
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    _handler.setFormatter(_formatter)
+    logger.addHandler(_handler)
+logger.setLevel(logging.INFO)
 
 
 def get_available_strategies() -> List[str]:
@@ -248,6 +259,16 @@ def backend_sample_labeling(
             ...
         ]
     """
+    # Log invocation similar to pages/Labeling.py style
+    try:
+        logger.info(
+            "Sampling cells via backend_sample_labeling (dataset=%s, budget=%s)",
+            selected_dataset,
+            labeling_budget,
+        )
+    except Exception:
+        pass
+
     # Get the actual tables from the dataset directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
@@ -367,7 +388,7 @@ def backend_sample_labeling(
     sampled_cells = random.sample(all_cells, min(labeling_budget, len(all_cells)))
 
     # Format the output
-    return [
+    results: List[Dict[str, Any]] = [
         {
             "id": i,
             "name": f"{cell['domain_fold']} – {cell['table']}",
@@ -382,6 +403,50 @@ def backend_sample_labeling(
         }
         for i, cell in enumerate(sampled_cells)
     ]
+
+    # Append sampling log for observability (JSONL)
+    try:
+        # logs/sampling/<dataset>.jsonl under project root
+        logs_root = os.path.join(root_dir, "logs", "sampling")
+        os.makedirs(logs_root, exist_ok=True)
+        log_path = os.path.join(logs_root, f"{selected_dataset}.jsonl")
+        ts = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        with open(log_path, "a", encoding="utf-8") as f:
+            for item in results:
+                record = {
+                    "ts": ts,
+                    "dataset": selected_dataset,
+                    "budget": int(labeling_budget),
+                    "item": item,
+                }
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        # Best-effort logging; ignore failures
+        pass
+
+    # Also emit structured logs of all sampled cells to console
+    try:
+        logger.info(
+            "Sampling summary (dataset=%s, budget=%s, sampled=%s)",
+            selected_dataset,
+            labeling_budget,
+            len(results),
+        )
+        for it in results:
+            logger.info(
+                "Sampled id=%s table=%s row=%s col=%s val=%s domain_fold=%s cell_fold=%s",
+                it.get("id"),
+                it.get("table"),
+                it.get("row"),
+                it.get("col"),
+                it.get("val"),
+                it.get("domain_fold"),
+                it.get("cell_fold"),
+            )
+    except Exception:
+        pass
+
+    return results
 
 
 def backend_label_propagation(

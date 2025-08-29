@@ -90,6 +90,9 @@ DEFAULT_INCLUDE_PREFIXES: tuple[str, ...] = (
     "budget_",
     "labeling_budget",
     "selected_strategies",
+    # Labeling state (persist across reloads)
+    "labeling_",
+    "sampled_",
     # Domain/quality folding derived state
     "table_locations",
     "domain_folds",

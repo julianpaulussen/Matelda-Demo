@@ -1,15 +1,13 @@
-import os
 import requests
 import streamlit as st
 from components import render_sidebar, apply_base_styles, get_current_theme
+from backend.api import ensure_api_started
 
 st.set_page_config(page_title="Player Lobby", layout="wide")
 apply_base_styles(get_current_theme())
 render_sidebar()
 
-
-def api_base() -> str:
-    return os.environ.get("API_BASE_URL", "http://127.0.0.1:8000")
+API_BASE = ensure_api_started()
 
 
 st.title("Lobby")
@@ -33,7 +31,7 @@ if live:
     st.rerun()
 
 try:
-    meta = requests.get(f"{api_base()}/api/sessions/{sid}", timeout=5).json()
+    meta = requests.get(f"{API_BASE}/sessions/{sid}", timeout=5).json()
     status = meta.get("status")
     st.write(f"Session: {sid} — Status: {status}")
     st.subheader("Players")

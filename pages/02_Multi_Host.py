@@ -1,155 +1,112 @@
-import os
-import json
 import requests
 import streamlit as st
-from components import render_sidebar, apply_base_styles, get_current_theme
-from components.session_persistence import persist_session
-from backend.backend import backend_sample_labeling
+from components import render_sidebar, apply_base_styles, get_current_theme, get_base_url
+from backend.api import ensure_api_started
 
 st.set_page_config(page_title="Host Lobby", layout="wide")
 apply_base_styles(get_current_theme())
 render_sidebar()
 
-
-def api_base() -> str:
-    return os.environ.get("API_BASE_URL", "http://127.0.0.1:8000")
-
-
-def ensure_api():
-    try:
-        r = requests.get(f"{api_base()}/health", timeout=2)
-        if r.status_code == 200:
-            return True
-    except Exception:
-        pass
-    st.warning(
-        "Backend API not reachable. Start it with: `uvicorn backend.api:app --reload` (default http://127.0.0.1:8000)."
-    )
-    return False
-
+API_BASE = ensure_api_started()
 
 st.title("Host Lobby")
-st.caption("Create a multiplayer session and wait for players to join.")
+st.caption("Create a multiplayer session and invite players.")
 
-if "mp.session_id" not in st.session_state:
-    st.session_state["mp.session_id"] = None
-    st.session_state["mp.player_id"] = None
-    st.session_state["mp.display_name"] = None
-    st.session_state["mp.role"] = "host"
-
-if not ensure_api():
-    st.stop()
-
-# Auto-create session on first load
+# Auto-create session and host player once
 if not st.session_state.get("mp.session_id"):
     try:
-        min_budget = int(st.session_state.get("labeling_budget", 10))
-        resp = requests.post(
-            f"{api_base()}/api/sessions", json={"min_budget": int(min_budget)}, timeout=5
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        st.session_state["mp.session_id"] = data["session_id"]
-        # Register host as a player
-        p = requests.post(
-            f"{api_base()}/api/sessions/{data['session_id']}/players",
-            json={"role": "host"},
-            timeout=5,
-        ).json()
+        # Resolve labeling budget from session or pipeline config
+        min_budget = None
+        # Prefer explicit labeling_budget
+        if st.session_state.get("labeling_budget") is not None:
+            min_budget = int(st.session_state.get("labeling_budget"))
+        # Fallback to UI input fields if used earlier
+        elif st.session_state.get("budget_input") is not None:
+            min_budget = int(st.session_state.get("budget_input"))
+        # Final fallback: read from configurations.json
+        if min_budget is None and st.session_state.get("pipeline_path"):
+            import os, json
+            cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+            if os.path.exists(cfg_path):
+                try:
+                    with open(cfg_path) as f:
+                        cfg = json.load(f)
+                    if cfg.get("labeling_budget") is not None:
+                        min_budget = int(cfg.get("labeling_budget", 10))
+                except Exception:
+                    pass
+        if min_budget is None:
+            min_budget = 10
+        r = requests.post(f"{API_BASE}/sessions", json={"min_budget": min_budget}, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        sid = data["session_id"]
+        st.session_state["mp.session_id"] = sid
+        st.session_state["mp.role"] = "host"
+        # Create host player
+        p = requests.post(f"{API_BASE}/sessions/{sid}/players", json={"role": "host"}, timeout=10).json()
         st.session_state["mp.player_id"] = p["player_id"]
         st.session_state["mp.display_name"] = p["display_name"]
-        persist_session()
     except Exception as e:
         st.error(f"Failed to create session: {e}")
         st.stop()
 
 sid = st.session_state.get("mp.session_id")
-if not sid:
-    st.stop()
+pid = st.session_state.get("mp.player_id")
+name = st.session_state.get("mp.display_name")
 
 st.markdown("---")
 
+# Invite block
 with st.container(border=True):
     st.subheader("Invite Players")
-    base_url = os.environ.get("BASE_URL", "http://localhost:8501")
-    join_url = f"{base_url}/?session_id={sid}"
-
-    st.code(join_url)
-    st.caption("Use the copy button to share.")
-
-    try:
-        import qrcode  # type: ignore
-    except ImportError:
-        st.warning("QR support missing. Install with: pip install 'qrcode[pil]'")
-        st.info("Use the Join URL above.")
-    else:
+    origin = get_base_url()
+    join_url = f"{origin}/?session_id={sid}"
+    st.text_input("Join URL", value=join_url, key="mp.join_url_display", disabled=True, label_visibility="collapsed")
+    if st.button("Copy link", use_container_width=True):
         try:
-            from io import BytesIO
-            qr = qrcode.QRCode(version=1, box_size=6, border=2)
-            qr.add_data(join_url)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            buf = BytesIO()
-            img.save(buf, format="PNG")
-            st.image(buf.getvalue(), caption="Scan to join")
-        except Exception as e:
-            st.error(f"Failed to render QR: {e}")
-            st.info("Use the Join URL above.")
+            from streamlit_javascript import st_javascript  # type: ignore
+            st_javascript(f'navigator.clipboard.writeText("{join_url}")')
+            st.success("Copied to clipboard")
+        except Exception:
+            st.info("Copy not available; select and copy the field above.")
+    # QR
+    try:
+        import qrcode
+        img = qrcode.make(join_url)
+        st.image(img, caption="Scan to join")
+    except Exception:
+        st.warning("Install QR support: pip install 'qrcode[pil]'")
 
+# Players block
 with st.container(border=True):
     st.subheader("Players")
-    live = st.checkbox("Live updates (auto-refresh)", key="host_live", value=False)
+    auto = st.checkbox("Live updates (auto-refresh)", value=False)
     if st.button("Refresh now"):
         st.rerun()
-    if live:
-        import time
-        time.sleep(3.5)
-        st.rerun()
-
+    if auto:
+        try:
+            from streamlit_autorefresh import st_autorefresh
+            st_autorefresh(interval=3500, key="host_lobby_refresh")
+        except Exception:
+            pass
     try:
-        meta = requests.get(f"{api_base()}/api/sessions/{sid}", timeout=5).json()
-        players = meta.get("players", [])
-        for p in players:
-            st.write(f"- {p['display_name']} ({p['role']}) — {p['status']}")
+        meta = requests.get(f"{API_BASE}/sessions/{sid}", timeout=10).json()
+        for p in meta.get("players", []):
+            st.write(f"- {p.get('display_name')} ({p.get('role')}) — {p.get('status')}")
     except Exception as e:
         st.error(f"Failed to fetch players: {e}")
 
 st.markdown("---")
-
 colA, colB = st.columns(2)
 with colA:
-    if st.button("Start session", type="primary"):
+    if st.button("Start session", type="primary", use_container_width=True):
         try:
-            # Compute total budget = labeling_budget x players
-            dataset = st.session_state.get("dataset_select")
-            cell_folds = st.session_state.get("cell_folds", {})
-            domain_folds = st.session_state.get("domain_folds", {})
-            meta = requests.get(f"{api_base()}/api/sessions/{sid}", timeout=5).json()
-            players = meta.get("players", [])
-            per_player = int(st.session_state.get("labeling_budget", 10))
-            total_budget = per_player * max(1, len(players))
-
-            # Only host computes the pool and saves it server-side
-            pool = backend_sample_labeling(dataset, total_budget, cell_folds, domain_folds)
-            samples = [
-                {
-                    "sample_id": str(c.get("id")),
-                    "dataset": dataset,
-                    "table": c.get("table"),
-                    "row": int(c.get("row", 0)),
-                    "col": c.get("col"),
-                    "val": c.get("val"),
-                }
-                for c in pool
-            ]
-            requests.post(f"{api_base()}/api/sessions/{sid}/pool", json=samples, timeout=15)
-
-            # Start session: server reserves first M for first player, etc.
-            requests.post(f"{api_base()}/api/sessions/{sid}/start", timeout=5)
-            # Host labels as a player too (multiplayer page)
+            # Trigger background preparation; then host proceeds to player labeling view
+            requests.post(f"{API_BASE}/sessions/{sid}/start", timeout=10)
             st.switch_page("pages/05_Multi_PlayerLabel.py")
         except Exception as e:
             st.error(f"Failed to start: {e}")
 with colB:
-    if st.button("Back"):
+    if st.button("Back", use_container_width=True):
         st.switch_page("pages/01_Multi_Role.py")

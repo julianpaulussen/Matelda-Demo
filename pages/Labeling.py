@@ -31,16 +31,21 @@ render_sidebar()
 
 ## Multiplayer handling moved to pages/05_Multi_PlayerLabel.py
 
-# Load dataset from pipeline config if not already in session_state
-# Load dataset from pipeline configuration if available
-if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:
+# Load dataset and labeling budget from pipeline configuration if available
+if "pipeline_path" in st.session_state:
     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     if os.path.exists(cfg_path):
-        with open(cfg_path) as f:
-            cfg = json.load(f)
-        selected = cfg.get("selected_dataset")
-        if selected:
-            st.session_state.dataset_select = selected
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            selected = cfg.get("selected_dataset")
+            if selected and "dataset_select" not in st.session_state:
+                st.session_state.dataset_select = selected
+            # Ensure labeling budget is hydrated from config if missing in session
+            if "labeling_budget" not in st.session_state and cfg.get("labeling_budget") is not None:
+                st.session_state.labeling_budget = int(cfg.get("labeling_budget", 10))
+        except Exception:
+            pass
 
 # If dataset remains undefined, warn user and provide a navigation button
 if "dataset_select" not in st.session_state:
@@ -197,7 +202,9 @@ if SAMPLE_KEY in st.session_state:
             idx = swipe.get("index")
             action = swipe.get("action")
             if idx is not None and action in {"left", "right"} and idx < len(cards):
-                card_id = cards[idx]["id"]
+                # Support legacy/multiplayer shapes without 'id'
+                c = cards[idx]
+                card_id = c.get("id") or c.get("sample_id") or f"{c.get('table')}|{c.get('row')}|{c.get('col')}|{c.get('val')}"
                 key = str(card_id)
                 new_val = action == "right"
                 prev_val = st.session_state.labeling_results.get(key)
