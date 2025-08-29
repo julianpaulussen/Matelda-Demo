@@ -13,6 +13,14 @@ st.set_page_config(
 current_theme = get_current_theme()
 apply_base_styles(current_theme)
 
+# If a join URL (?session_id=...) hits the root app, redirect to Join page
+try:
+    qp = st.query_params
+    if qp and "session_id" in qp and qp.get("session_id"):
+        st.switch_page("pages/03_Multi_Join.py")
+except Exception:
+    pass
+
 st.title("Matelda")
 st.write("Welcome to Matelda!")
 st.markdown("""

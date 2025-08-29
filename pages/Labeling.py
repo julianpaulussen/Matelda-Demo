@@ -19,6 +19,8 @@ apply_base_styles()
 # Sidebar navigation
 render_sidebar()
 
+## Multiplayer handling moved to pages/05_Multi_PlayerLabel.py
+
 # Load dataset from pipeline config if not already in session_state
 # Load dataset from pipeline configuration if available
 if "dataset_select" not in st.session_state and "pipeline_path" in st.session_state:

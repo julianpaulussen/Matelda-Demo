@@ -23,16 +23,30 @@ def render_sidebar():
         st.session_state.current_page = current_script
     
     # Define pages
-    pages = [
-        ("app.py", "Matelda"),
-        ("pages/Configurations.py", "Configurations"),
-        ("pages/DomainBasedFolding.py", "Domain Based Folding"),
-        ("pages/QualityBasedFolding.py", "Quality Based Folding"),
-        ("pages/Labeling.py", "Labeling"),
-        ("pages/PropagatedErrors.py", "Propagated Errors"),
-        ("pages/ErrorDetection.py", "Error Detection"),
-        ("pages/Results.py", "Results")
-    ]
+    role = st.session_state.get("mp.role")
+    if role == "player":
+        # Minimal nav for player: Lobby -> Label -> Thanks
+        pages = [
+            ("pages/03_Multi_Join.py", "Join"),
+            ("pages/04_Multi_PlayerLobby.py", "Lobby"),
+            ("pages/05_Multi_PlayerLabel.py", "Labeling"),
+            ("pages/06_Multi_PlayerThanks.py", "Thank You"),
+        ]
+    else:
+        pages = [
+            ("app.py", "Matelda"),
+            ("pages/Configurations.py", "Configurations"),
+            ("pages/DomainBasedFolding.py", "Domain Based Folding"),
+            ("pages/QualityBasedFolding.py", "Quality Based Folding"),
+            ("pages/00_ModeSelect.py", "Mode Select"),
+            ("pages/01_Multi_Role.py", "Multiplayer"),
+            ("pages/02_Multi_Host.py", "Host"),
+            ("pages/03_Multi_Join.py", "Join"),
+            ("pages/Labeling.py", "Labeling"),
+            ("pages/PropagatedErrors.py", "Propagated Errors"),
+            ("pages/ErrorDetection.py", "Error Detection"),
+            ("pages/Results.py", "Results"),
+        ]
     
     with st.sidebar:
         # Preemptive CSS injection to hide default elements immediately
@@ -87,6 +101,16 @@ def render_sidebar():
                 label = f"**→ {label}**"
             st.page_link(path, label=label)
             
+        # Show session info if present
+        sid = st.session_state.get("mp.session_id")
+        name = st.session_state.get("mp.display_name")
+        if sid or name:
+            st.markdown("---")
+            if sid:
+                st.caption(f"Session: {sid}")
+            if name:
+                st.caption(f"You: {name}")
+
         st.markdown('</div>', unsafe_allow_html=True)
         
         # Add theme switcher

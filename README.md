@@ -111,3 +111,28 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/lejuliennn/data-tinder/discussions)
 
 Thank you for choosing *Matelda for efficient data lake cleaning. We believe that this approach will significantly improve the quality of your data while saving you time and resources. Happy data cleaning!
+
+## 🧑‍🤝‍🧑 Multiplayer Labeling (Optional)
+
+This repo includes an optional multiplayer mode for the Labeling flow.
+
+- Start the API backend:
+  ```bash
+  uvicorn backend.api:app --reload
+  ```
+  Optionally set `BASE_URL` to your Streamlit URL (e.g., `http://localhost:8501`).
+
+- (Optional) Seed items for assignment:
+  ```bash
+  # Seed fake items
+  python -m backend.sessions seed --fake 500
+  # Or seed from a CSV
+  python -m backend.sessions seed --csv datasets/<dataset>/<table>/clean.csv
+  ```
+
+- Run Streamlit as usual:
+  ```bash
+  streamlit run app.py
+  ```
+
+- Use the new pages under "Mode Select" → "Multiplayer" to Host or Join. Host gets a join URL and QR code; players see Lobby → Label → Thank You.

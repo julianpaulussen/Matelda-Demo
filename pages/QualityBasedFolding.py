@@ -624,4 +624,4 @@ if nav_cols[2].button("Next", key="save_cell_folds", use_container_width=True):
         st.success("✅ Saved.")
     else:
         st.warning("⚠️ No pipeline path set.")
-    st.switch_page("pages/Labeling.py")
+    st.switch_page("pages/00_ModeSelect.py")

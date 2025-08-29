@@ -1,0 +1,47 @@
+import os
+import requests
+import streamlit as st
+from components import render_sidebar, apply_base_styles, get_current_theme
+
+st.set_page_config(page_title="Player Lobby", layout="wide")
+apply_base_styles(get_current_theme())
+render_sidebar()
+
+
+def api_base() -> str:
+    return os.environ.get("API_BASE_URL", "http://127.0.0.1:8000")
+
+
+st.title("Lobby")
+
+sid = st.session_state.get("mp.session_id")
+pid = st.session_state.get("mp.player_id")
+name = st.session_state.get("mp.display_name")
+
+if not (sid and pid):
+    st.warning("No session joined. Go to Join page.")
+    st.stop()
+
+st.info(f"You are: {name}")
+
+live = st.checkbox("Live updates (auto-refresh)", key="player_lobby_live", value=False)
+if st.button("Refresh now"):
+    st.rerun()
+if live:
+    import time
+    time.sleep(3.5)
+    st.rerun()
+
+try:
+    meta = requests.get(f"{api_base()}/api/sessions/{sid}", timeout=5).json()
+    status = meta.get("status")
+    st.write(f"Session: {sid} — Status: {status}")
+    st.subheader("Players")
+    for p in meta.get("players", []):
+        st.write(f"- {p['display_name']} ({p['status']})")
+    if status == "active":
+        st.switch_page("pages/05_Multi_PlayerLabel.py")
+    else:
+        st.caption("Waiting for host to start...")
+except Exception as e:
+    st.error(f"Failed to fetch session: {e}")

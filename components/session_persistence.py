@@ -99,6 +99,8 @@ DEFAULT_INCLUDE_PREFIXES: tuple[str, ...] = (
     "global_split_mode",
     "selected_split_tables",
     "run_folding",
+    # Multiplayer session keys
+    "mp.",
 )
 
 
