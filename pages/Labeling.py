@@ -84,41 +84,26 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-if "run_quality_folding" not in st.session_state:
-    st.session_state.run_quality_folding = False
+def run_sampling():
+    with st.spinner("🔄 Processing... Please wait..."):
+        labeling_budget = st.session_state.get("labeling_budget", 10)
+        cell_folds = st.session_state.get("cell_folds", {})
+        domain_folds = st.session_state.get("domain_folds", {})
+        sampled_cells = backend_sample_labeling(
+            selected_dataset=dataset,
+            labeling_budget=labeling_budget,
+            cell_folds=cell_folds,
+            domain_folds=domain_folds,
+        )
+        st.session_state.sampled_cells = sampled_cells
+        # Small delay to make spinner visible and UX smooth
+        time.sleep(0.3)
 
-if not st.session_state.run_quality_folding:
-    if st.button("Run Labeling"):
-        with st.spinner("🔄 Processing... Please wait..."):
-            labeling_budget = st.session_state.get("labeling_budget", 10)
-            cell_folds = st.session_state.get("cell_folds", {})
-            domain_folds = st.session_state.get("domain_folds", {})
-            sampled_cells = backend_sample_labeling(
-                selected_dataset=dataset,
-                labeling_budget=labeling_budget,
-                cell_folds=cell_folds,
-                domain_folds=domain_folds,
-            )
-            st.session_state.sampled_cells = sampled_cells
-            time.sleep(2)
-        st.session_state.run_quality_folding = True
-        st.rerun()
-else:
-    # Quality-based folding already completed but sampling might be missing
-    if "sampled_cells" not in st.session_state:
-        with st.spinner("🔄 Processing... Please wait..."):
-            labeling_budget = st.session_state.get("labeling_budget", 10)
-            cell_folds = st.session_state.get("cell_folds", {})
-            domain_folds = st.session_state.get("domain_folds", {})
-            sampled_cells = backend_sample_labeling(
-                selected_dataset=dataset,
-                labeling_budget=labeling_budget,
-                cell_folds=cell_folds,
-                domain_folds=domain_folds,
-            )
-            st.session_state.sampled_cells = sampled_cells
+# Auto-run sampling on first visit/reload when no samples are present
+if "sampled_cells" not in st.session_state:
+    run_sampling()
 
-if st.session_state.run_quality_folding:
+if "sampled_cells" in st.session_state:
     cards: List[Dict[str, Any]] = st.session_state.get("sampled_cells", [])
     card_data = [c for c in (make_card(card) for card in cards) if c]
 
