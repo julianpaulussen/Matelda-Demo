@@ -1,6 +1,6 @@
 import requests
 import streamlit as st
-from components import render_sidebar, apply_base_styles, get_current_theme
+from components import render_sidebar, apply_base_styles, get_current_theme, render_inline_restart_button
 from components.session_persistence import persist_session
 from backend.api import ensure_api_started
 
@@ -58,3 +58,33 @@ if st.button("Join") and sid:
             st.switch_page("pages/04_Multi_PlayerLobby.py")
     except Exception as e:
         st.error(f"Failed to join: {e}")
+
+st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+with nav_cols[0]:
+    render_inline_restart_button(page_id="join", use_container_width=True)
+
+with nav_cols[1]:
+    if st.button("Back", key="join_back", use_container_width=True):
+        st.switch_page("pages/01_Multi_Role.py")
+
+with nav_cols[2]:
+    if st.button("Next", key="join_next", use_container_width=True):
+        # Attempt to join using the entered sid
+        if sid:
+            try:
+                meta = requests.get(f"{API_BASE}/sessions/{sid}", timeout=5)
+                if meta.status_code != 200:
+                    st.error("Session not found")
+                else:
+                    p = requests.post(f"{API_BASE}/sessions/{sid}/players", json={"role": "player"}, timeout=5).json()
+                    st.session_state["mp.session_id"] = sid
+                    st.session_state["mp.player_id"] = p["player_id"]
+                    st.session_state["mp.display_name"] = p["display_name"]
+                    st.session_state["mp.role"] = "player"
+                    from components.session_persistence import persist_session
+                    persist_session()
+                    st.switch_page("pages/04_Multi_PlayerLobby.py")
+            except Exception as e:
+                st.error(f"Failed to join: {e}")

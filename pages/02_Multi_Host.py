@@ -1,6 +1,6 @@
 import requests
 import streamlit as st
-from components import render_sidebar, apply_base_styles, get_current_theme, get_base_url
+from components import render_sidebar, apply_base_styles, get_current_theme, get_base_url, render_inline_restart_button
 from backend.api import ensure_api_started
 
 st.set_page_config(page_title="Host Lobby", layout="wide")
@@ -62,31 +62,13 @@ with st.container(border=True):
     st.subheader("Invite Players")
     origin = get_base_url()
     join_url = f"{origin}/?session_id={sid}"
-    # Join URL with inline copy button
-    url_col, copy_col = st.columns([6, 1], gap="small")
-    with url_col:
-        st.text_input("Join URL", value=join_url, key="mp.join_url_display", help="Share this link with players.")
-    with copy_col:
-        if st.button("📋", key="copy_join_url", help="Copy link", use_container_width=True):
-            try:
-                from streamlit_javascript import st_javascript  # type: ignore
-                st_javascript(f'navigator.clipboard.writeText("{join_url}")')
-                st.success("Join URL copied")
-            except Exception:
-                st.info("Copy not available; select the field and copy.")
+    # Join URL (no copy button)
+    st.caption("Join URL")
+    st.code(join_url)
 
-    # Session code with inline copy button
-    code_col, code_copy_col = st.columns([6, 1], gap="small")
-    with code_col:
-        st.text_input("Session Code", value=sid, key="mp.session_code_display", help="Share this code for joining.")
-    with code_copy_col:
-        if st.button("📋", key="copy_session_code", help="Copy code", use_container_width=True):
-            try:
-                from streamlit_javascript import st_javascript  # type: ignore
-                st_javascript(f'navigator.clipboard.writeText("{sid}")')
-                st.success("Session code copied")
-            except Exception:
-                st.info("Copy not available; select the field and copy.")
+    # Session code (no copy button)
+    st.caption("Session Code")
+    st.code(sid)
     # QR (show precise error only if import fails)
     try:
         import qrcode  # type: ignore
@@ -116,9 +98,17 @@ with st.container(border=True):
         st.error(f"Failed to fetch players: {e}")
 
 st.markdown("---")
-colA, colB = st.columns(2)
-with colA:
-    if st.button("Start session", type="primary", use_container_width=True):
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+with nav_cols[0]:
+    render_inline_restart_button(page_id="host", use_container_width=True)
+
+with nav_cols[1]:
+    if st.button("Back", use_container_width=True):
+        st.switch_page("pages/01_Multi_Role.py")
+
+with nav_cols[2]:
+    if st.button("Start Session", type="primary", use_container_width=True):
         @st.dialog("Start Session Now?", width="medium")
         def _confirm_start_dialog():
             st.write("Are you sure all players have joined? Starting will assign items to players.")
@@ -134,6 +124,3 @@ with colA:
                 if st.button("Cancel", key="host_start_cancel", use_container_width=True):
                     st.rerun()
         _confirm_start_dialog()
-with colB:
-    if st.button("Back", use_container_width=True):
-        st.switch_page("pages/01_Multi_Role.py")

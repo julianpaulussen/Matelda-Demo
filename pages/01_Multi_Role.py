@@ -1,5 +1,5 @@
 import streamlit as st
-from components import render_sidebar, apply_base_styles, get_current_theme
+from components import render_sidebar, apply_base_styles, get_current_theme, render_inline_restart_button
 
 st.set_page_config(page_title="Multiplayer: Role", layout="wide")
 apply_base_styles(get_current_theme())
@@ -17,3 +17,16 @@ with col2:
     if st.button("Join a session", use_container_width=True):
         st.switch_page("pages/03_Multi_Join.py")
 
+st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+with nav_cols[0]:
+    render_inline_restart_button(page_id="multi_role", use_container_width=True)
+
+with nav_cols[1]:
+    if st.button("Back", key="multi_back", use_container_width=True):
+        st.switch_page("pages/00_ModeSelect.py")
+
+with nav_cols[2]:
+    if st.button("Next", key="multi_next", use_container_width=True):
+        st.switch_page("pages/02_Multi_Host.py")
