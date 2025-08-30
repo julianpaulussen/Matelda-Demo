@@ -1,6 +1,6 @@
 # Demonstrating Matelda for Multi-Table Error Detection
 
-[![Read Paper](https://img.shields.io/badge/📄%20Read%20Paper-OpenProceedings-blue)](https://www.openproceedings.org/2025/conf/edbt/paper-98.pdf)
+[![Read Paper](https://img.shields.io/badge/📄%20Read%20Paper-VLDB-blue)](https://www.vldb.org/pvldb/vol18/p5379-ahmadi.pdf)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.0+-red.svg)](https://streamlit.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,34 +12,37 @@ We present Matelda, an interactive system for multi-table error detection that c
 ## Screenshots 
 
 ![Pipeline](screenshots/pipeline-git.png)
-![Labeling](screenshots/labeling-git.png)
+<!-- ![Labeling](screenshots/labeling-git.png) -->
+
+<div align="center">
+<table style="border-collapse: collapse; border-spacing: 0;">
+<tr>
+<td style="padding: 2px;"><img src="screenshots/1-Configurations.png" width="200" alt="Configurations"/></td>
+<td style="padding: 2px;"><img src="screenshots/2-DBF.png" width="200" alt="Domain-Based Folding"/></td>
+<td style="padding: 2px;"><img src="screenshots/3-QBF.png" width="200" alt="Quality-Based Folding"/></td>
+<td style="padding: 2px;"><img src="screenshots/4-Host-Lobby.png" width="200" alt="Host Lobby"/></td>
+</tr>
+<tr>
+<td style="padding: 2px;"><img src="screenshots/5-Labeling.png" width="200" alt="Labeling"/></td>
+<td style="padding: 2px;"><img src="screenshots/6-Error-Detection.png" width="200" alt="Error Detection"/></td>
+<td style="padding: 2px;"><img src="screenshots/7-Error-Propagation.png" width="200" alt="Error Propagation"/></td>
+<td style="padding: 2px;"><img src="screenshots/8-Results.png" width="200" alt="Results"/></td>
+</tr>
+</table>
+</div>
 
 ## Video
 
 Link to the Video: [Matelda Demo](videos/Matelda-Demo.mp4)
 
-## 🎯 Supported Datasets
-
-### 📊 Demo Datasets
-- **Chess.com** - Chess game data analysis
-- **Lichess** - Online chess platform data
-- **Pokemon** - Pokemon statistics and attributes
-
-### 🏢 Quintet Collection
-- **Beers** - Beer ratings and characteristics
-- **Flights** - Flight data and schedules
-- **Hospital** - Medical data analysis
-- **Movies** - Movie ratings and metadata
-- **Rayyan** - Research paper screening data
-
-## 📦 Installation
+## Installation
 
 ```bash
-git clone https://github.com/lejuliennn/data-tinder.git
-cd data-tinder
+git clone https://github.com/julianpaulussen/Matelda-Demo.git
+cd Matelda-Demo
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -66,7 +69,7 @@ Ensure you have Python 3.10+ installed on your system.
 
 4. **Open your browser** to `http://localhost:8501`
 
-## 🛠️ Architecture
+## Architecture
 
 ### Core Components
 
@@ -75,9 +78,7 @@ Ensure you have Python 3.10+ installed on your system.
 - **Pages**: Application pages and workflows (`pages/`)
 - **Pipelines**: Pre-configured processing pipelines (`pipelines/`)
 
-## 🧪 Development
-
-### Local Development
+## Development
 
 ```bash
 # Clone the repository
@@ -91,7 +92,7 @@ pip install -r requirements.txt
 streamlit run app.py --server.runOnSave true
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
@@ -101,38 +102,13 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-## 📞 Support
+## Support
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/lejuliennn/data-tinder/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/lejuliennn/data-tinder/discussions)
+- **Issues**: [GitHub Issues](https://github.com/julianpaulussen/Matelda-Demo/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/julianpaulussen/Matelda-Demo/discussions)
 
 Thank you for choosing *Matelda for efficient data lake cleaning. We believe that this approach will significantly improve the quality of your data while saving you time and resources. Happy data cleaning!
-
-## 🧑‍🤝‍🧑 Multiplayer Labeling (Optional)
-
-This repo includes an optional multiplayer mode for the Labeling flow.
-
-- Start the API backend:
-  ```bash
-  uvicorn backend.api:app --reload
-  ```
-  Optionally set `BASE_URL` to your Streamlit URL (e.g., `http://localhost:8501`).
-
-- (Optional) Seed items for assignment:
-  ```bash
-  # Seed fake items
-  python -m backend.sessions seed --fake 500
-  # Or seed from a CSV
-  python -m backend.sessions seed --csv datasets/<dataset>/<table>/clean.csv
-  ```
-
-- Run Streamlit as usual:
-  ```bash
-  streamlit run app.py
-  ```
-
-- Use the new pages under "Mode Select" → "Multiplayer" to Host or Join. Host gets a join URL and QR code; players see Lobby → Label → Thank You.
