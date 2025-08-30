@@ -1,6 +1,6 @@
 # Demonstrating Matelda for Multi-Table Error Detection
 
-[![Read Paper](https://img.shields.io/badge/📄%20Read%20Paper-OpenProceedings-blue)](https://www.vldb.org/pvldb/vol18/p5379-ahmadi.pdf)
+[![Read Paper](https://img.shields.io/badge/📄%20Read%20Paper-VLDB-blue)](https://www.vldb.org/pvldb/vol18/p5379-ahmadi.pdf)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.0+-red.svg)](https://streamlit.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,7 +12,24 @@ We present Matelda, an interactive system for multi-table error detection that c
 ## Screenshots 
 
 ![Pipeline](screenshots/pipeline-git.png)
-![Labeling](screenshots/labeling-git.png)
+<!-- ![Labeling](screenshots/labeling-git.png) -->
+
+<div align="center">
+<table style="border-collapse: collapse; border-spacing: 0;">
+<tr>
+<td style="padding: 2px;"><img src="screenshots/1-Configurations.png" width="200" alt="Configurations"/></td>
+<td style="padding: 2px;"><img src="screenshots/2-DBF.png" width="200" alt="Domain-Based Folding"/></td>
+<td style="padding: 2px;"><img src="screenshots/3-QBF.png" width="200" alt="Quality-Based Folding"/></td>
+<td style="padding: 2px;"><img src="screenshots/4-Host-Lobby.png" width="200" alt="Host Lobby"/></td>
+</tr>
+<tr>
+<td style="padding: 2px;"><img src="screenshots/5-Labeling.png" width="200" alt="Labeling"/></td>
+<td style="padding: 2px;"><img src="screenshots/6-Error-Detection.png" width="200" alt="Error Detection"/></td>
+<td style="padding: 2px;"><img src="screenshots/7-Error-Propagation.png" width="200" alt="Error Propagation"/></td>
+<td style="padding: 2px;"><img src="screenshots/8-Results.png" width="200" alt="Results"/></td>
+</tr>
+</table>
+</div>
 
 ## Video
 
