@@ -31,10 +31,18 @@ except Exception:
 
 st.title("Matelda")
 st.write("Welcome to Matelda!")
-st.markdown("""
-The underlying paper is available on [OpenProceedings](https://www.openproceedings.org/2025/conf/edbt/paper-98.pdf).
+st.markdown("""            
+Real-world datasets are often fragmented across multiple heterogeneous tables, managed by different teams or organizations. Ensuring data quality in such environments is challenging, as traditional error detection tools typically operate on isolated tables and overlook cross-table relationships. To address this gap, we investigate how cleaning multiple tables simultaneously, combined with structured user collaboration, can reduce annotation effort and enhance the effectiveness and efficiency of error detection. 
+            
+We present Matelda, an interactive system for multi-table error detection that combines automated error detection with human-in-the-loop refinement. Matelda guides users through Inspection & Action, allowing them to explore system-generated insights, refine decisions, and annotate data with contextual support. It organizes tables using domain-based and quality-based folding and leverages semi-supervised learning to propagate labels across related tables efficiently. Our demonstration showcases Matelda’s capabilities for collaborative error detection and resolution by leveraging shared knowledge, contextual similarity, and structured user interactions across multiple tables. 
+            
+For more information on this project, please refer to our paper [Demonstrating Matelda for Multi-Table Error Detection](https://www.vldb.org/pvldb/vol18/p5379-ahmadi.pdf).
 The Repository of the Demo is available on [GitHub](https://github.com/julianpaulussen/Matelda-Demo).
-Click the button below to start the demo.
+
+Click the button below to start the demo. If you have any questions, please feel free to ask us. 
+            
+Best,\\
+Fatemeh Ahmadi, Julian Paulußen, Ziawasch Abedjan 
 """)
 
 # Sidebar Navigation
