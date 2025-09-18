@@ -26,7 +26,6 @@ We present Matelda, an interactive system for multi-table error detection that c
 <td style="padding: 2px;"><img src="screenshots/5-Labeling.png" width="200" alt="Labeling"/></td>
 <td style="padding: 2px;"><img src="screenshots/6-Error-Detection.png" width="200" alt="Error Detection"/></td>
 <td style="padding: 2px;"><img src="screenshots/7-Error-Propagation.png" width="200" alt="Error Propagation"/></td>
-<td style="padding: 2px;"><img src="screenshots/8-Results.png" width="200" alt="Results"/></td>
 </tr>
 </table>
 </div>
